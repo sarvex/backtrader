@@ -31,7 +31,7 @@ chkvals = []
 
 chkmin = 151  # because of the weekly data
 chkind = [btind.SMA]
-chkargs = dict()
+chkargs = {}
 
 
 def test_run(main=False):

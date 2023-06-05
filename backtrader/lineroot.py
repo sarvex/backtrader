@@ -44,8 +44,8 @@ class MetaLineRoot(metabase.MetaParams):
     class is sought
     '''
 
-    def donew(cls, *args, **kwargs):
-        _obj, args, kwargs = super(MetaLineRoot, cls).donew(*args, **kwargs)
+    def donew(self, *args, **kwargs):
+        _obj, args, kwargs = super(MetaLineRoot, self).donew(*args, **kwargs)
 
         # Find the owner and store it
         # startlevel = 4 ... to skip intermediate call stacks
@@ -209,10 +209,7 @@ class LineRoot(with_metaclass(MetaLineRoot, object)):
             other = other[0]
 
         # operation(float, other) ... expecting other to be a float
-        if r:
-            return operation(other, self[0])
-
-        return operation(self[0], other)
+        return operation(other, self[0]) if r else operation(self[0], other)
 
     def _operationown_stage2(self, operation):
         return operation(self[0])

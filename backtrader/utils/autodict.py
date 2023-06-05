@@ -32,7 +32,7 @@ def Tree():
 
 class AutoDictList(dict):
     def __missing__(self, key):
-        value = self[key] = list()
+        value = self[key] = []
         return value
 
 
@@ -112,34 +112,19 @@ class AutoOrderedDict(OrderedDict):
 
     # Define math operations
     def __iadd__(self, other):
-        if type(self) != type(other):
-            return type(other)() + other
-
-        return self + other
+        return type(other)() + other if type(self) != type(other) else self + other
 
     def __isub__(self, other):
-        if type(self) != type(other):
-            return type(other)() - other
-
-        return self - other
+        return type(other)() - other if type(self) != type(other) else self - other
 
     def __imul__(self, other):
-        if type(self) != type(other):
-            return type(other)() * other
-
-        return self + other
+        return type(other)() * other if type(self) != type(other) else self + other
 
     def __idiv__(self, other):
-        if type(self) != type(other):
-            return type(other)() // other
-
-        return self + other
+        return type(other)() // other if type(self) != type(other) else self + other
 
     def __itruediv__(self, other):
-        if type(self) != type(other):
-            return type(other)() / other
-
-        return self + other
+        return type(other)() / other if type(self) != type(other) else self + other
 
     def lvalues(self):
         return py3lvalues(self)

@@ -56,7 +56,7 @@ class VChartCSVData(feed.CSVDataBase):
         self._timeframe = self.vctframes[timeframe]
 
         dttxt = next(itokens)
-        y, m, d = int(dttxt[0:4]), int(dttxt[4:6]), int(dttxt[6:8])
+        y, m, d = int(dttxt[:4]), int(dttxt[4:6]), int(dttxt[6:8])
 
         tmtxt = next(itokens)
         if timeframe == 'I':

@@ -58,32 +58,31 @@ class SMAStrategy(bt.Strategy):
     def next(self):
         print('Strategy:', len(self))
 
-        txt = list()
-        txt.append('Data0')
-        txt.append('%04d' % len(self.data0))
         dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-        txt.append('{:f}'.format(self.data.datetime[0]))
-        txt.append('%s' % self.data.datetime.datetime(0).strftime(dtfmt))
-        # txt.append('{:f}'.format(self.data.open[0]))
-        # txt.append('{:f}'.format(self.data.high[0]))
-        # txt.append('{:f}'.format(self.data.low[0]))
-        txt.append('{:f}'.format(self.data.close[0]))
+        txt = [
+            'Data0',
+            '%04d' % len(self.data0),
+            *(
+                '{:f}'.format(self.data.datetime[0]),
+                f'{self.data.datetime.datetime(0).strftime(dtfmt)}',
+                '{:f}'.format(self.data.close[0]),
+            ),
+        ]
         # txt.append('{:6d}'.format(int(self.data.volume[0])))
         # txt.append('{:d}'.format(int(self.data.openinterest[0])))
         # txt.append('{:f}'.format(self.sma_small[0]))
         print(', '.join(txt))
 
         if len(self.datas) > 1 and len(self.data1):
-            txt = list()
-            txt.append('Data1')
-            txt.append('%04d' % len(self.data1))
+            txt = ['Data1', '%04d' % len(self.data1)]
             dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-            txt.append('{:f}'.format(self.data1.datetime[0]))
-            txt.append('%s' % self.data1.datetime.datetime(0).strftime(dtfmt))
-            # txt.append('{}'.format(self.data1.open[0]))
-            # txt.append('{}'.format(self.data1.high[0]))
-            # txt.append('{}'.format(self.data1.low[0]))
-            txt.append('{}'.format(self.data1.close[0]))
+            txt.extend(
+                (
+                    '{:f}'.format(self.data1.datetime[0]),
+                    f'{self.data1.datetime.datetime(0).strftime(dtfmt)}',
+                    f'{self.data1.close[0]}',
+                )
+            )
             # txt.append('{}'.format(self.data1.volume[0]))
             # txt.append('{}'.format(self.data1.openinterest[0]))
             # txt.append('{}'.format(float('NaN')))
@@ -124,35 +123,35 @@ def runstrat():
         datapath = args.dataname2 or '../../datas/2006-week-001.txt'
         data2 = btfeeds.BacktraderCSVData(
             dataname=datapath)
+    elif args.oldrs:
+        data2 = (
+            bt.DataReplayer(
+                dataname=data,
+                timeframe=tframes[args.timeframe],
+                compression=args.compression,
+            )
+            if args.replay
+            else bt.DataResampler(
+                dataname=data,
+                timeframe=tframes[args.timeframe],
+                compression=args.compression,
+            )
+        )
     else:
-        if args.oldrs:
-            if args.replay:
-                data2 = bt.DataReplayer(
-                    dataname=data,
-                    timeframe=tframes[args.timeframe],
-                    compression=args.compression)
-            else:
-                data2 = bt.DataResampler(
-                    dataname=data,
-                    timeframe=tframes[args.timeframe],
-                    compression=args.compression)
-
-        else:
-            data2 = bt.DataClone(dataname=data)
-            if args.replay:
-                if args.timeframe == 'daily':
-                    data2.addfilter(ReplayerDaily)
-                elif args.timeframe == 'weekly':
-                    data2.addfilter(ReplayerWeekly)
-                elif args.timeframe == 'monthly':
-                    data2.addfilter(ReplayerMonthly)
-            else:
-                if args.timeframe == 'daily':
-                    data2.addfilter(ResamplerDaily)
-                elif args.timeframe == 'weekly':
-                    data2.addfilter(ResamplerWeekly)
-                elif args.timeframe == 'monthly':
-                    data2.addfilter(ResamplerMonthly)
+        data2 = bt.DataClone(dataname=data)
+        if args.replay:
+            if args.timeframe == 'daily':
+                data2.addfilter(ReplayerDaily)
+            elif args.timeframe == 'weekly':
+                data2.addfilter(ReplayerWeekly)
+            elif args.timeframe == 'monthly':
+                data2.addfilter(ReplayerMonthly)
+        elif args.timeframe == 'daily':
+            data2.addfilter(ResamplerDaily)
+        elif args.timeframe == 'weekly':
+            data2.addfilter(ResamplerWeekly)
+        elif args.timeframe == 'monthly':
+            data2.addfilter(ResamplerMonthly)
 
     # First add the original data - smaller timeframe
     cerebro.adddata(data)

@@ -40,11 +40,10 @@ class RelativeVolumeByBar(bt.Indicator):
     )
 
     def _plotlabel(self):
-        plabels = []
-        for name, value in self.params._getitems():
-            plabels.append('%s: %s' % (name, value.strftime('%H:%M')))
-
-        return plabels
+        return [
+            f"{name}: {value.strftime('%H:%M')}"
+            for name, value in self.params._getitems()
+        ]
 
     def __init__(self):
         # Inform the platform about the minimum period needs
@@ -52,7 +51,7 @@ class RelativeVolumeByBar(bt.Indicator):
         self.addminperiod(minbuffer)
 
         # Structures/variable to keep synchronization
-        self.pvol = dict()
+        self.pvol = {}
         self.vcount = collections.defaultdict(int)
 
         self.days = 0

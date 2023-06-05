@@ -65,8 +65,7 @@ class MomentumOscillator(Indicator):
               ('band', 100.0))
 
     def _plotlabel(self):
-        plabels = [self.p.period]
-        return plabels
+        return [self.p.period]
 
     def _plotinit(self):
         self.plotinfo.plothlines = [self.p.band]

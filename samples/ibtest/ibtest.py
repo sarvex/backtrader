@@ -50,7 +50,7 @@ class TestStrategy(bt.Strategy):
 
     def __init__(self):
         # To control operation entries
-        self.orderid = list()
+        self.orderid = []
         self.order = None
 
         self.counttostop = 0
@@ -89,35 +89,40 @@ class TestStrategy(bt.Strategy):
         self.next(frompre=True)
 
     def next(self, frompre=False):
-        txt = list()
-        txt.append('Data0')
-        txt.append('%04d' % len(self.data0))
         dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-        txt.append('{}'.format(self.data.datetime[0]))
-        txt.append('%s' % self.data.datetime.datetime(0).strftime(dtfmt))
-        txt.append('{}'.format(self.data.open[0]))
-        txt.append('{}'.format(self.data.high[0]))
-        txt.append('{}'.format(self.data.low[0]))
-        txt.append('{}'.format(self.data.close[0]))
-        txt.append('{}'.format(self.data.volume[0]))
-        txt.append('{}'.format(self.data.openinterest[0]))
-        txt.append('{}'.format(self.sma[0]))
+        txt = [
+            'Data0',
+            '%04d' % len(self.data0),
+            *(
+                f'{self.data.datetime[0]}',
+                f'{self.data.datetime.datetime(0).strftime(dtfmt)}',
+                f'{self.data.open[0]}',
+                f'{self.data.high[0]}',
+                f'{self.data.low[0]}',
+                f'{self.data.close[0]}',
+                f'{self.data.volume[0]}',
+                f'{self.data.openinterest[0]}',
+                f'{self.sma[0]}',
+            ),
+        ]
         print(', '.join(txt))
 
         if len(self.datas) > 1 and len(self.data1):
-            txt = list()
-            txt.append('Data1')
-            txt.append('%04d' % len(self.data1))
+            txt = ['Data1', '%04d' % len(self.data1)]
             dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-            txt.append('{}'.format(self.data1.datetime[0]))
-            txt.append('%s' % self.data1.datetime.datetime(0).strftime(dtfmt))
-            txt.append('{}'.format(self.data1.open[0]))
-            txt.append('{}'.format(self.data1.high[0]))
-            txt.append('{}'.format(self.data1.low[0]))
-            txt.append('{}'.format(self.data1.close[0]))
-            txt.append('{}'.format(self.data1.volume[0]))
-            txt.append('{}'.format(self.data1.openinterest[0]))
-            txt.append('{}'.format(float('NaN')))
+            txt.extend(
+                (
+                    f'{self.data1.datetime[0]}',
+                    f'{self.data1.datetime.datetime(0).strftime(dtfmt)}',
+                    f'{self.data1.open[0]}',
+                    f'{self.data1.high[0]}',
+                    f'{self.data1.low[0]}',
+                    f'{self.data1.close[0]}',
+                    f'{self.data1.volume[0]}',
+                    f'{self.data1.openinterest[0]}',
+                    f"{float('NaN')}",
+                )
+            )
             print(', '.join(txt))
 
         if self.counttostop:  # stop after x live lines
@@ -198,8 +203,9 @@ class TestStrategy(bt.Strategy):
 
     def start(self):
         if self.data0.contractdetails is not None:
-            print('Timezone from ContractDetails: {}'.format(
-                  self.data0.contractdetails.m_timeZoneId))
+            print(
+                f'Timezone from ContractDetails: {self.data0.contractdetails.m_timeZoneId}'
+            )
 
         header = ['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume',
                   'OpenInterest', 'SMA']
@@ -268,7 +274,7 @@ def runstrategy():
     )
 
     if not args.usestore and not args.broker:   # neither store nor broker
-        datakwargs.update(storekwargs)  # pass the store args over the data
+        datakwargs |= storekwargs
 
     data0 = IBDataFactory(dataname=args.data0, **datakwargs)
 
@@ -310,10 +316,7 @@ def runstrategy():
         if data1 is not None:
             cerebro.adddata(data1)
 
-    if args.valid is None:
-        valid = None
-    else:
-        valid = datetime.timedelta(seconds=args.valid)
+    valid = None if args.valid is None else datetime.timedelta(seconds=args.valid)
     # Add the strategy
     cerebro.addstrategy(TestStrategy,
                         smaperiod=args.smaperiod,

@@ -28,15 +28,15 @@ import backtrader as bt
 
 
 class MetaRollOver(bt.DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaRollOver, cls).__init__(name, bases, dct)
+        super(MetaRollOver, self).__init__(name, bases, dct)
 
-    def donew(cls, *args, **kwargs):
+    def donew(self, *args, **kwargs):
         '''Intercept const. to copy timeframe/compression from 1st data'''
         # Create the object and set the params in place
-        _obj, args, kwargs = super(MetaRollOver, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MetaRollOver, self).donew(*args, **kwargs)
 
         if args:
             _obj.p.timeframe = args[0]._timeframe
@@ -124,7 +124,7 @@ class RollOver(bt.with_metaclass(MetaRollOver, bt.DataBase)):
         self._ds = list(self._rolls)
         self._d = self._ds.pop(0) if self._ds else None
         self._dexp = None
-        self._dts = [datetime.min for xx in self._ds]
+        self._dts = [datetime.min for _ in self._ds]
 
     def stop(self):
         super(RollOver, self).stop()
@@ -139,16 +139,10 @@ class RollOver(bt.with_metaclass(MetaRollOver, bt.DataBase)):
         return bt.utils.date.Localizer(self.p.tz)
 
     def _checkdate(self, dt, d):
-        if self.p.checkdate is not None:
-            return self.p.checkdate(dt, d)
-
-        return False
+        return self.p.checkdate(dt, d) if self.p.checkdate is not None else False
 
     def _checkcondition(self, d0, d1):
-        if self.p.checkcondition is not None:
-            return self.p.checkcondition(d0, d1)
-
-        return True
+        return True if self.p.checkcondition is None else self.p.checkcondition(d0, d1)
 
     def _load(self):
         while self._d is not None:

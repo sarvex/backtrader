@@ -32,14 +32,14 @@ from backtrader.utils.py3 import MAXINT, with_metaclass
 
 
 class MetaAnalyzer(bt.MetaParams):
-    def donew(cls, *args, **kwargs):
+    def donew(self, *args, **kwargs):
         '''
         Intercept the strategy parameter
         '''
         # Create the object and set the params in place
-        _obj, args, kwargs = super(MetaAnalyzer, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MetaAnalyzer, self).donew(*args, **kwargs)
 
-        _obj._children = list()
+        _obj._children = []
 
         _obj.strategy = strategy = bt.metabase.findowner(_obj, bt.Strategy)
         _obj._parent = bt.metabase.findowner(_obj, Analyzer)
@@ -56,17 +56,15 @@ class MetaAnalyzer(bt.MetaParams):
             _obj.data = data = _obj.datas[0]
 
             for l, line in enumerate(data.lines):
-                linealias = data._getlinealias(l)
-                if linealias:
-                    setattr(_obj, 'data_%s' % linealias, line)
+                if linealias := data._getlinealias(l):
+                    setattr(_obj, f'data_{linealias}', line)
                 setattr(_obj, 'data_%d' % l, line)
 
             for d, data in enumerate(_obj.datas):
                 setattr(_obj, 'data%d' % d, data)
 
                 for l, line in enumerate(data.lines):
-                    linealias = data._getlinealias(l)
-                    if linealias:
+                    if linealias := data._getlinealias(l):
                         setattr(_obj, 'data%d_%s' % (d, linealias), line)
                     setattr(_obj, 'data%d_%d' % (d, l), line)
 
@@ -75,9 +73,10 @@ class MetaAnalyzer(bt.MetaParams):
         # Return to the normal chain
         return _obj, args, kwargs
 
-    def dopostinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaAnalyzer, cls).dopostinit(_obj, *args, **kwargs)
+    def dopostinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaAnalyzer, self).dopostinit(
+            _obj, *args, **kwargs
+        )
 
         if _obj._parent is not None:
             _obj._parent._register(_obj)
@@ -274,8 +273,7 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
         '''
         writer = bt.WriterFile(*args, **kwargs)
         writer.start()
-        pdct = dict()
-        pdct[self.__class__.__name__] = self.get_analysis()
+        pdct = {self.__class__.__name__: self.get_analysis()}
         writer.writedict(pdct)
         writer.stop()
 
@@ -287,13 +285,12 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
 
 
 class MetaTimeFrameAnalyzerBase(Analyzer.__class__):
-    def __new__(meta, name, bases, dct):
+    def __new__(cls, name, bases, dct):
         # Hack to support original method name
         if '_on_dt_over' in dct:
             dct['on_dt_over'] = dct.pop('_on_dt_over')  # rename method
 
-        return super(MetaTimeFrameAnalyzerBase, meta).__new__(meta, name,
-                                                              bases, dct)
+        return super(MetaTimeFrameAnalyzerBase, cls).__new__(cls, name, bases, dct)
 
 
 class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
@@ -443,4 +440,4 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
         dtcmp -= tadjust
         dtkey = dtcmp
 
-        return dtcmp, dtkey
+        return dtkey, dtkey

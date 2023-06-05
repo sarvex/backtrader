@@ -46,8 +46,7 @@ class StFetcher(object):
     def __new__(cls, *args, **kwargs):
         idx = kwargs.pop('idx')
 
-        obj = cls._STRATS[idx](*args, **kwargs)
-        return obj
+        return cls._STRATS[idx](*args, **kwargs)
 
 
 def runstrat(pargs=None):
@@ -64,8 +63,7 @@ def runstrat(pargs=None):
     strats = [x[0] for x in results]  # flatten the result
     for i, strat in enumerate(strats):
         rets = strat.analyzers.returns.get_analysis()
-        print('Strat {} Name {}:\n  - analyzer: {}\n'.format(
-            i, strat.__class__.__name__, rets))
+        print(f'Strat {i} Name {strat.__class__.__name__}:\n  - analyzer: {rets}\n')
 
 
 def parse_args(pargs=None):

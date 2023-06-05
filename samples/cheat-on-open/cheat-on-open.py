@@ -44,9 +44,8 @@ class St(bt.Strategy):
             return
 
         self.order = None
-        print('{} {} Executed at price {}'.format(
-            bt.num2date(order.executed.dt).date(),
-            'Buy' * order.isbuy() or 'Sell', order.executed.price)
+        print(
+            f"{bt.num2date(order.executed.dt).date()} {'Buy' * order.isbuy() or 'Sell'} Executed at price {order.executed.price}"
         )
 
     def operate(self, fromopen):
@@ -56,16 +55,14 @@ class St(bt.Strategy):
             if self.signal < 0:
                 self.order = self.close()
         elif self.signal > 0:
-            print('{} Send Buy, fromopen {}, close {}'.format(
-                self.data.datetime.date(),
-                fromopen, self.data.close[0])
+            print(
+                f'{self.data.datetime.date()} Send Buy, fromopen {fromopen}, close {self.data.close[0]}'
             )
             self.order = self.buy()
 
     def next(self):
-        print('{} next, open {} close {}'.format(
-            self.data.datetime.date(),
-            self.data.open[0], self.data.close[0])
+        print(
+            f'{self.data.datetime.date()} next, open {self.data.open[0]} close {self.data.close[0]}'
         )
 
         if self.cheating:
@@ -84,7 +81,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -98,19 +95,19 @@ def runstrat(args=None):
     cerebro.adddata(data0)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

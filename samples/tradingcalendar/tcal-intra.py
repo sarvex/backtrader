@@ -60,15 +60,15 @@ class St(bt.Strategy):
         self.next()
 
     def next(self):
-        print('Strategy len {} datetime {}'.format(
-            len(self), self.datetime.datetime()), end=' ')
+        print(f'Strategy len {len(self)} datetime {self.datetime.datetime()}', end=' ')
 
-        print('Data0 len {} datetime {}'.format(
-            len(self.data0), self.data0.datetime.datetime()), end=' ')
+        print(
+            f'Data0 len {len(self.data0)} datetime {self.data0.datetime.datetime()}',
+            end=' ',
+        )
 
         if len(self.data1):
-            print('Data1 len {} datetime {}'.format(
-                len(self.data1), self.data1.datetime.datetime()))
+            print(f'Data1 len {len(self.data1)} datetime {self.data1.datetime.datetime()}')
         else:
             print()
 
@@ -109,19 +109,19 @@ def runstrat(args=None):
         cerebro.addcalendar(NYSE_2016())  # or NYSE_2016() to pass an instance
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

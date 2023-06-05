@@ -76,11 +76,7 @@ class VChartFile(bt.Store):
             else:
                 break  # found vcdir
 
-        if vcdir is not None:  # something was found
-            vcdir = os.path.join(vcdir, *VC_DATADIR)
-        else:
-            vcdir = VC_NONE
-
+        vcdir = os.path.join(vcdir, *VC_DATADIR) if vcdir is not None else VC_NONE
         return vcdir
 
     def get_datapath(self):

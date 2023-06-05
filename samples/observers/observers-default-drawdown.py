@@ -41,7 +41,7 @@ class MyStrategy(bt.Strategy):
         dt = dt or self.data.datetime[0]
         if isinstance(dt, float):
             dt = bt.num2date(dt)
-        print('%s, %s' % (dt.isoformat(), txt))
+        print(f'{dt.isoformat()}, {txt}')
 
     def __init__(self):
         # SimpleMovingAverage on main data

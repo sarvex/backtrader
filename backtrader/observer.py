@@ -27,15 +27,14 @@ from backtrader.utils.py3 import with_metaclass
 
 
 class MetaObserver(ObserverBase.__class__):
-    def donew(cls, *args, **kwargs):
-        _obj, args, kwargs = super(MetaObserver, cls).donew(*args, **kwargs)
-        _obj._analyzers = list()  # keep children analyzers
+    def donew(self, *args, **kwargs):
+        _obj, args, kwargs = super(MetaObserver, self).donew(*args, **kwargs)
+        _obj._analyzers = []
 
         return _obj, args, kwargs  # return the instantiated object and args
 
-    def dopreinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaObserver, cls).dopreinit(_obj, *args, **kwargs)
+    def dopreinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaObserver, self).dopreinit(_obj, *args, **kwargs)
 
         if _obj._stclock:  # Change clock if strategy wide observer
             _obj._clock = _obj._owner

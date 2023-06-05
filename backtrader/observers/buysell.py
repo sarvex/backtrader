@@ -58,8 +58,8 @@ class BuySell(Observer):
     )
 
     def next(self):
-        buy = list()
-        sell = list()
+        buy = []
+        sell = []
 
         for order in self._owner._orderspending:
             if order.data is not self.data or not order.executed.size:

@@ -32,16 +32,13 @@ class SmaCross(bt.SignalStrategy):
 
     def notify_order(self, order):
         if not order.alive():
-            print('{} {} {}@{}'.format(
-                bt.num2date(order.executed.dt),
-                'buy' if order.isbuy() else 'sell',
-                order.executed.size,
-                order.executed.price)
+            print(
+                f"{bt.num2date(order.executed.dt)} {'buy' if order.isbuy() else 'sell'} {order.executed.size}@{order.executed.price}"
             )
 
     def notify_trade(self, trade):
         if trade.isclosed:
-            print('profit {}'.format(trade.pnlcomm))
+            print(f'profit {trade.pnlcomm}')
 
     def __init__(self):
         sma1 = bt.ind.SMA(period=self.params.sma1)
@@ -62,12 +59,12 @@ def runstrat(pargs=None):
         todate=datetime.datetime.strptime(args.todate, '%Y-%m-%d'))
     cerebro.adddata(data0)
 
-    cerebro.addstrategy(SmaCross, **(eval('dict(' + args.strat + ')')))
+    cerebro.addstrategy(SmaCross, **eval(f'dict({args.strat})'))
     cerebro.addsizer(bt.sizers.FixedSize, stake=args.stake)
 
     cerebro.run()
     if args.plot:
-        cerebro.plot(**(eval('dict(' + args.plot + ')')))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

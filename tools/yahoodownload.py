@@ -60,10 +60,7 @@ class YahooDownload(object):
 
         url = self.urlhist.format(ticker)
 
-        sesskwargs = dict()
-        if False and self.p.proxies:
-            sesskwargs['proxies'] = self.p.proxies
-
+        sesskwargs = {}
         crumb = None
         sess = requests.Session()
         for i in range(self.retries + 1):  # at least once
@@ -98,17 +95,17 @@ class YahooDownload(object):
         # urldown/ticker?period1=posix1&period2=posix2&interval=1d&events=history&crumb=crumb
 
         # Try to download
-        urld = '{}/{}'.format(self.urldown, ticker)
+        urld = f'{self.urldown}/{ticker}'
 
         urlargs = []
         posix = datetime.date(1970, 1, 1)
         if todate is not None:
             period2 = (todate.date() - posix).total_seconds()
-            urlargs.append('period2={}'.format(int(period2)))
+            urlargs.append(f'period2={int(period2)}')
 
         if todate is not None:
             period1 = (fromdate.date() - posix).total_seconds()
-            urlargs.append('period1={}'.format(int(period1)))
+            urlargs.append(f'period1={int(period1)}')
 
         intervals = {
             'd': '1d',
@@ -116,20 +113,19 @@ class YahooDownload(object):
             'm': '1mo',
         }
 
-        urlargs.append('interval={}'.format(intervals[period]))
-        urlargs.append('events=history')
-        urlargs.append('crumb={}'.format(crumb))
-
-        urld = '{}?{}'.format(urld, '&'.join(urlargs))
+        urlargs.extend(
+            (f'interval={intervals[period]}', 'events=history', f'crumb={crumb}')
+        )
+        urld = f"{urld}?{'&'.join(urlargs)}"
         f = None
-        for i in range(self.retries + 1):  # at least once
+        for _ in range(self.retries + 1):
             resp = sess.get(urld, **sesskwargs)
             if resp.status_code != requests.codes.ok:
                 continue
 
             ctype = resp.headers['Content-Type']
             if 'text/csv' not in ctype:
-                self.error = 'Wrong content type: %s' % ctype
+                self.error = f'Wrong content type: {ctype}'
                 continue  # HTML returned? wrong url?
 
             # buffer everything from the socket into a local buffer
@@ -147,12 +143,7 @@ class YahooDownload(object):
         if not self.datafile:
             return
 
-        if not hasattr(filename, 'read'):
-            # It's not a file - open it
-            f = io.open(filename, 'w')
-        else:
-            f = filename
-
+        f = io.open(filename, 'w') if not hasattr(filename, 'read') else filename
         self.datafile.seek(0)
         for line in self.datafile:
             f.write(line)

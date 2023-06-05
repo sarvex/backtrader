@@ -129,11 +129,7 @@ class Returns(TimeFrameAnalyzerBase):
         except ZeroDivisionError:
             rtot = float('-inf')
         else:
-            if nlrtot < 0.0:
-                rtot = float('-inf')
-            else:
-                rtot = math.log(nlrtot)
-
+            rtot = float('-inf') if nlrtot < 0.0 else math.log(nlrtot)
         self.rets['rtot'] = rtot
 
         # Average return

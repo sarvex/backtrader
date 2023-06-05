@@ -52,40 +52,42 @@ class St(bt.Strategy):
 
     def start(self):
         self.callcounter = 0
-        txtfields = list()
-        txtfields.append('Len')
-        txtfields.append('Datetime')
-        txtfields.append('Open')
-        txtfields.append('High')
-        txtfields.append('Low')
-        txtfields.append('Close')
-        txtfields.append('Volume')
-        txtfields.append('OpenInterest')
+        txtfields = [
+            'Len',
+            'Datetime',
+            'Open',
+            'High',
+            'Low',
+            'Close',
+            'Volume',
+            'OpenInterest',
+        ]
         print(','.join(txtfields))
 
         self.doop = 0
 
     def next(self):
-        txtfields = list()
-        txtfields.append('%04d' % len(self))
-        txtfields.append(self.data0.datetime.date(0).isoformat())
-        txtfields.append('%.2f' % self.data0.open[0])
-        txtfields.append('%.2f' % self.data0.high[0])
-        txtfields.append('%.2f' % self.data0.low[0])
-        txtfields.append('%.2f' % self.data0.close[0])
-        txtfields.append('%.2f' % self.data0.volume[0])
-        txtfields.append('%.2f' % self.data0.openinterest[0])
+        txtfields = ['%04d' % len(self), self.data0.datetime.date(0).isoformat()]
+        txtfields.extend(
+            (
+                '%.2f' % self.data0.open[0],
+                '%.2f' % self.data0.high[0],
+                '%.2f' % self.data0.low[0],
+                '%.2f' % self.data0.close[0],
+                '%.2f' % self.data0.volume[0],
+                '%.2f' % self.data0.openinterest[0],
+            )
+        )
         print(','.join(txtfields))
 
-        # Single order
         if self.doop == 0:
-            if not self.position.size:
+            if self.position.size:
+                self.close()
+
+            else:
                 stakevol = (self.data0.volume[0] * self.p.stakeperc) // 100
                 print('++ STAKE VOLUME:', stakevol)
                 self.buy(size=stakevol)
-
-            else:
-                self.close()
 
         self.doop += 1
 
@@ -100,7 +102,7 @@ FILLERS = {
 def runstrat():
     args = parse_args()
 
-    datakwargs = dict()
+    datakwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         datakwargs['fromdate'] = fromdate
@@ -116,9 +118,9 @@ def runstrat():
 
     cerebro.broker.set_cash(args.cash)
     if args.filler is not None:
-        fillerkwargs = dict()
+        fillerkwargs = {}
         if args.filler_args is not None:
-            fillerkwargs = eval('dict(' + args.filler_args + ')')
+            fillerkwargs = eval(f'dict({args.filler_args})')
 
         filler = FILLERS[args.filler](**fillerkwargs)
         cerebro.broker.set_filler(filler)

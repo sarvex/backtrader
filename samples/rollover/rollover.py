@@ -37,19 +37,23 @@ class TheStrategy(bt.Strategy):
         print(', '.join(header))
 
     def next(self):
-        txt = list()
-        txt.append('%04d' % len(self.data0))
-        txt.append('{}'.format(self.data0._dataname))
-        # Internal knowledge ... current expiration in use is in _d
-        txt.append('{}'.format(self.data0._d._dataname))
-        txt.append('{}'.format(self.data.datetime.date()))
-        txt.append('{}'.format(self.data.datetime.date().strftime('%a')))
-        txt.append('{}'.format(self.data.open[0]))
-        txt.append('{}'.format(self.data.high[0]))
-        txt.append('{}'.format(self.data.low[0]))
-        txt.append('{}'.format(self.data.close[0]))
-        txt.append('{}'.format(self.data.volume[0]))
-        txt.append('{}'.format(self.data.openinterest[0]))
+        txt = [
+            '%04d' % len(self.data0),
+            f'{self.data0._dataname}',
+            f'{self.data0._d._dataname}',
+            f'{self.data.datetime.date()}',
+        ]
+        txt.extend(
+            (
+                f"{self.data.datetime.date().strftime('%a')}",
+                f'{self.data.open[0]}',
+                f'{self.data.high[0]}',
+                f'{self.data.low[0]}',
+                f'{self.data.close[0]}',
+                f'{self.data.volume[0]}',
+                f'{self.data.openinterest[0]}',
+            )
+        )
         print(', '.join(txt))
 
 
@@ -98,30 +102,29 @@ def runstrat(args=None):
     store = bt.stores.VChartFile()
     ffeeds = [store.getdata(dataname=x) for x in fcodes]
 
-    rollkwargs = dict()
+    rollkwargs = {}
     if args.checkdate:
         rollkwargs['checkdate'] = checkdate
 
         if args.checkcondition:
             rollkwargs['checkcondition'] = checkvolume
 
-    if not args.no_cerebro:
-        if args.rollover:
-            cerebro.rolloverdata(name='FESX', *ffeeds, **rollkwargs)
-        else:
-            cerebro.chaindata(name='FESX', *ffeeds)
-    else:
+    if args.no_cerebro:
         drollover = bt.feeds.RollOver(*ffeeds, dataname='FESX', **rollkwargs)
         cerebro.adddata(drollover)
 
+    elif args.rollover:
+        cerebro.rolloverdata(name='FESX', *ffeeds, **rollkwargs)
+    else:
+        cerebro.chaindata(name='FESX', *ffeeds)
     cerebro.addstrategy(TheStrategy)
     cerebro.run(stdstats=False)
 
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -153,10 +156,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

@@ -36,7 +36,7 @@ class PairTradingStrategy(bt.Strategy):
         if self.p.printout:
             dt = dt or self.data.datetime[0]
             dt = bt.num2date(dt)
-            print('%s, %s' % (dt.isoformat(), txt))
+            print(f'{dt.isoformat()}, {txt}')
 
     def notify_order(self, order):
         if order.status in [bt.Order.Submitted, bt.Order.Accepted]:
@@ -51,9 +51,7 @@ class PairTradingStrategy(bt.Strategy):
                 self.log(selltxt, order.executed.dt)
 
         elif order.status in [order.Expired, order.Canceled, order.Margin]:
-            self.log('%s ,' % order.Status[order.status])
-            pass  # Simply log
-
+            self.log(f'{order.Status[order.status]} ,')
         # Allow new orders
         self.orderid = None
 

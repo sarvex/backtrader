@@ -29,11 +29,10 @@ class InfluxDBTool(object):
     def write_dataframe_to_idb(self, ticker):
         """Write Pandas Dataframe to InfluxDB database"""
         cachepath = self._cache
-        cachefile = ('%s/%s-1M.csv.gz' % (cachepath, ticker))
+        cachefile = f'{cachepath}/{ticker}-1M.csv.gz'
 
         if not os.path.exists(cachefile):
-            log.warn('Import file does not exist: %s' %
-                     (cachefile))
+            log.warn(f'Import file does not exist: {cachefile}')
             return
 
         df = pd.read_csv(cachefile, compression='infer', header=0,
@@ -46,7 +45,7 @@ class InfluxDBTool(object):
         try:
             self.dfdb.write_points(df, ticker)
         except InfluxDBClientError as err:
-            log.error('Write to database failed: %s' % err)
+            log.error(f'Write to database failed: {err}')
 
     def get_tickers_from_file(self, filename):
         """Load ticker list from txt file"""
@@ -55,8 +54,7 @@ class InfluxDBTool(object):
 
         tickers = []
         with io.open(filename, 'r') as fd:
-            for ticker in fd:
-                tickers.append(ticker.rstrip())
+            tickers.extend(ticker.rstrip() for ticker in fd)
         return tickers
 
 

@@ -297,20 +297,20 @@ class Cerebro(with_metaclass(MetaParams, object)):
         self._dolive = False
         self._doreplay = False
         self._dooptimize = False
-        self.stores = list()
-        self.feeds = list()
-        self.datas = list()
+        self.stores = []
+        self.feeds = []
+        self.datas = []
         self.datasbyname = collections.OrderedDict()
-        self.strats = list()
-        self.optcbs = list()  # holds a list of callbacks for opt strategies
-        self.observers = list()
-        self.analyzers = list()
-        self.indicators = list()
-        self.sizers = dict()
-        self.writers = list()
-        self.storecbs = list()
-        self.datacbs = list()
-        self.signals = list()
+        self.strats = []
+        self.optcbs = []
+        self.observers = []
+        self.analyzers = []
+        self.indicators = []
+        self.sizers = {}
+        self.writers = []
+        self.storecbs = []
+        self.datacbs = []
+        self.signals = []
         self._signal_strat = (None, None, None)
         self._signal_concurrent = False
         self._signal_accumulate = False
@@ -322,8 +322,8 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
         self._tradingcal = None  # TradingCalendar()
 
-        self._pretimers = list()
-        self._ohistory = list()
+        self._pretimers = []
+        self._ohistory = []
         self._fhistory = None
 
     @staticmethod
@@ -331,13 +331,12 @@ class Cerebro(with_metaclass(MetaParams, object)):
         '''Handy function which turns things into things that can be iterated upon
         including iterables
         '''
-        niterable = list()
+        niterable = []
         for elem in iterable:
-            if isinstance(elem, string_types):
+            if isinstance(elem, string_types) or not isinstance(
+                elem, collectionsAbc.Iterable
+            ):
                 elem = (elem,)
-            elif not isinstance(elem, collectionsAbc.Iterable):  # Different functions will be called for different Python versions
-                elem = (elem,)
-
             niterable.append(elem)
 
         return niterable
@@ -575,11 +574,8 @@ class Cerebro(with_metaclass(MetaParams, object)):
         If a subclass of `TradingCalendarBase` is passed (not an instance) it
         will be instantiated
         '''
-        if isinstance(cal, string_types):
+        if isinstance(cal, string_types) or hasattr(cal, 'valid_days'):
             cal = PandasMarketCalendar(calendar=cal)
-        elif hasattr(cal, 'valid_days'):
-            cal = PandasMarketCalendar(calendar=cal)
-
         else:
             try:
                 if issubclass(cal, TradingCalendarBase):
@@ -1078,7 +1074,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
             self._dorunonce = False
             self._dopreload = False
 
-        self.runwriters = list()
+        self.runwriters = []
 
         # Add the system default writer if requested
         if self.p.writer is True:
@@ -1093,7 +1089,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
         # Write down if any writer wants the full csv output
         self.writers_csv = any(map(lambda x: x.p.csv, self.runwriters))
 
-        self.runstrats = list()
+        self.runstrats = []
 
         if self.signals:  # allow processing of signals
             signalst, sargs, skwargs = self._signal_strat
@@ -1111,7 +1107,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
             if signalst is None:  # recheck
                 # Still None, create a default one
-                signalst, sargs, skwargs = SignalStrategy, tuple(), dict()
+                signalst, sargs, skwargs = SignalStrategy, tuple(), {}
 
             # Add the signal strategy
             self.addstrategy(signalst,
@@ -1156,11 +1152,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
                 for data in self.datas:
                     data.stop()
 
-        if not self._dooptimize:
-            # avoid a list of list for regular cases
-            return self.runstrats[0]
-
-        return self.runstrats
+        return self.runstrats[0] if not self._dooptimize else self.runstrats
 
     def _init_stcount(self):
         self.stcount = itertools.count(0)
@@ -1174,12 +1166,11 @@ class Cerebro(with_metaclass(MetaParams, object)):
         '''
         self._init_stcount()
 
-        self.runningstrats = runstrats = list()
+        self.runningstrats = runstrats = []
         for store in self.stores:
             store.start()
 
         if self.p.cheat_on_open and self.p.broker_coo:
-            # try to activate in broker
             if hasattr(self._broker, 'set_coo'):
                 self._broker.set_coo(True)
 
@@ -1195,7 +1186,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
             feed.start()
 
         if self.writers_csv:
-            wheaders = list()
+            wheaders = []
             for data in self.datas:
                 if data.csv:
                     wheaders.extend(data.getwriterheaders())
@@ -1230,11 +1221,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
             runstrats.append(strat)
 
         tz = self.p.tz
-        if isinstance(tz, integer_types):
-            tz = self.datas[tz]._tz
-        else:
-            tz = tzparse(tz)
-
+        tz = self.datas[tz]._tz if isinstance(tz, integer_types) else tzparse(tz)
         if runstrats:
             # loop separated for clarity
             defaultsizer = self.sizers.get(None, (None, None, None))
@@ -1296,11 +1283,10 @@ class Cerebro(with_metaclass(MetaParams, object)):
                     self._runonce_old(runstrats)
                 else:
                     self._runonce(runstrats)
+            elif self.p.oldsync:
+                self._runnext_old(runstrats)
             else:
-                if self.p.oldsync:
-                    self._runnext_old(runstrats)
-                else:
-                    self._runnext(runstrats)
+                self._runnext(runstrats)
 
             for strat in runstrats:
                 strat._stop()
@@ -1321,7 +1307,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
         if self._dooptimize and self.p.optreturn:
             # Results can be optimized
-            results = list()
+            results = []
             for strat in runstrats:
                 for a in strat.analyzers:
                     a.strategy = None
@@ -1346,7 +1332,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
         cerebroinfo['Datas'] = datainfos
 
-        stratinfos = dict()
+        stratinfos = {}
         for strat in runstrats:
             stname = strat.__class__.__name__
             stratinfos[stname] = strat.getwriterinfo()
@@ -1455,7 +1441,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
         # here again, because pointers are at 0
         data0 = self.datas[0]
         datas = self.datas[1:]
-        for i in range(data0.buflen()):
+        for _ in range(data0.buflen()):
             data0.advance()
             for data in datas:
                 data.advance(datamaster=data0)
@@ -1477,7 +1463,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
             return
 
         if self.writers_csv:
-            wvalues = list()
+            wvalues = []
             for data in self.datas:
                 if data.csv:
                     wvalues.extend(data.getwritervalues())
@@ -1546,15 +1532,12 @@ class Cerebro(with_metaclass(MetaParams, object)):
                 d.do_qcheck(newqcheck, qlapse.total_seconds())
                 drets.append(d.next(ticks=False))
 
-            d0ret = any((dret for dret in drets))
+            d0ret = any(drets)
             if not d0ret and any((dret is None for dret in drets)):
                 d0ret = None
 
             if d0ret:
-                dts = []
-                for i, ret in enumerate(drets):
-                    dts.append(datas[i].datetime[0] if ret else None)
-
+                dts = [datas[i].datetime[0] if ret else None for i, ret in enumerate(drets)]
                 # Get index to minimum datetime
                 if onlyresample or noresample:
                     dt0 = min((d for d in dts if d is not None))
@@ -1578,10 +1561,6 @@ class Cerebro(with_metaclass(MetaParams, object)):
                     if d.next(datamaster=dmaster, ticks=False):  # retry
                         dts[i] = d.datetime[0]  # good -> store
                         # self._plotfillers2[i].append(slen)  # mark as fill
-                    else:
-                        # self._plotfillers[i].append(slen)  # mark as empty
-                        pass
-
                 # make sure only those at dmaster level end up delivering
                 for i, dti in enumerate(dts):
                     if dti is not None:
@@ -1678,10 +1657,6 @@ class Cerebro(with_metaclass(MetaParams, object)):
                 if dti <= dt0:
                     datas[i].advance()
                     # self._plotfillers2[i].append(slen)  # mark as fill
-                else:
-                    # self._plotfillers[i].append(slen)
-                    pass
-
             self._check_timers(runstrats, dt0, cheat=True)
 
             if self.p.cheat_on_open:

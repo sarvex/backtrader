@@ -41,7 +41,7 @@ class IQFeedTool(object):
                              self._database)
 
         if not args.fromdate:
-            self._start = str(dt.datetime.today().year)
+            self._start = str(dt.datetime.now().year)
         elif len(args.fromdate) == 4 or len(args.fromdate == 10):
             self._start = args.fromdate
         else:
@@ -49,7 +49,7 @@ class IQFeedTool(object):
             sys.exit(-1)
 
         if not args.todate:
-            self._stop = str(dt.datetime.today().year)
+            self._stop = str(dt.datetime.now().year)
         elif len(args.fromdate) == 4 or len(args.fromdate == 10):
             self._stop = args.todate
         else:
@@ -74,11 +74,10 @@ class IQFeedTool(object):
             chunk = self._sock.recv(recv_buffer).decode('latin-1')
             data += chunk
             if chunk.startswith('E,'):  # error condition
-                if chunk.startswith('E,!NO_DATA!'):
-                    log.warn('No data available for the given symbol or dates')
-                    return
-                else:
+                if not chunk.startswith('E,!NO_DATA!'):
                     raise Exception(chunk)
+                log.warn('No data available for the given symbol or dates')
+                return
             elif end_msg in chunk:
                 break
 
@@ -86,8 +85,7 @@ class IQFeedTool(object):
         data = data[:-1 * (len(end_msg) + 3)]
         data = "".join(data.split("\r"))
         data = data.replace(",\n", ",")[:-1]
-        data = data.split(",")
-        return data
+        return data.split(",")
 
     def get_historical_minute_data(self, ticker: str):
         """Request historical 5 minute data from DTN."""
@@ -101,8 +99,8 @@ class IQFeedTool(object):
             start = start[:4]
 
         for year in range(int(start), int(stop) + 1):
-            beg_time = ('%s0101000000' % year)
-            end_time = ('%s1231235959' % year)
+            beg_time = f'{year}0101000000'
+            end_time = f'{year}1231235959'
             msg = "HIT,%s,60,%s,%s,,,,1,,,s\r\n" % (ticker,
                                                     beg_time,
                                                     end_time)
@@ -115,7 +113,7 @@ class IQFeedTool(object):
         try:
             self.dfdb.write_points(self._ndf, ticker)
         except InfluxDBClientError as err:
-            log.error('Write to database failed: %s' % err)
+            log.error(f'Write to database failed: {err}')
 
     def add_data_to_df(self, data: np.array):
         """Build Pandas Dataframe in memory"""
@@ -136,10 +134,7 @@ class IQFeedTool(object):
             ['high_p', 'low_p', 'open_p', 'close_p']].astype(float)
         df[['volume', 'oi']] = df[['volume', 'oi']].astype(int)
 
-        if self._ndf.empty:
-            self._ndf = df
-        else:
-            self._ndf = self._ndf.append(df)
+        self._ndf = df if self._ndf.empty else self._ndf.append(df)
 
     def get_tickers_from_file(self, filename):
         """Load ticker list from txt file"""
@@ -148,8 +143,7 @@ class IQFeedTool(object):
 
         tickers = []
         with io.open(filename, 'r') as fd:
-            for ticker in fd:
-                tickers.append(ticker.rstrip())
+            tickers.extend(ticker.rstrip() for ticker in fd)
         return tickers
 
 

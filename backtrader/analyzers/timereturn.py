@@ -103,24 +103,17 @@ class TimeReturn(TimeFrameAnalyzerBase):
         self._value_start = 0.0
         self._lastvalue = None
         if self.p.data is None:
-            # keep the initial portfolio value if not tracing a data
-            if not self._fundmode:
-                self._lastvalue = self.strategy.broker.getvalue()
-            else:
+            if self._fundmode:
                 self._lastvalue = self.strategy.broker.fundvalue
+            else:
+                self._lastvalue = self.strategy.broker.getvalue()
 
     def notify_fund(self, cash, value, fundvalue, shares):
-        if not self._fundmode:
             # Record current value
-            if self.p.data is None:
-                self._value = value  # the portofolio value if tracking no data
-            else:
-                self._value = self.p.data[0]  # the data value if tracking data
+        if self.p.data is None:
+            self._value = value if not self._fundmode else fundvalue
         else:
-            if self.p.data is None:
-                self._value = fundvalue  # the fund value if tracking no data
-            else:
-                self._value = self.p.data[0]  # the data value if tracking data
+            self._value = self.p.data[0]  # the data value if tracking data
 
     def on_dt_over(self):
         # next is called in a new timeframe period
@@ -130,10 +123,7 @@ class TimeReturn(TimeFrameAnalyzerBase):
 
         else:
             # The 1st tick has no previous reference, use the opening price
-            if self.p.firstopen:
-                self._value_start = self.p.data.open[0]
-            else:
-                self._value_start = self.p.data[0]
+            self._value_start = self.p.data.open[0] if self.p.firstopen else self.p.data[0]
 
     def next(self):
         # Calculate the return

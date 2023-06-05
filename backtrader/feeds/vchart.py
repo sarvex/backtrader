@@ -61,11 +61,7 @@ class VChartData(feed.DataBase):
                 self.p.timeframe = TimeFrame.Minutes
             else:
                 # Neither fd nor min ... just the code, assign extension
-                if self.p.timeframe == TimeFrame.Days:
-                    self.ext = '.fd'
-                else:
-                    self.ext = '.min'
-
+                self.ext = '.fd' if self.p.timeframe == TimeFrame.Days else '.min'
         if self.p.timeframe >= TimeFrame.Days:
             self.barsize = 28
             self.dtsize = 1
@@ -131,7 +127,7 @@ class VChartFeed(feed.FeedBase):
     params = (('basepath', ''),) + DataCls.params._gettuple()
 
     def _getdata(self, dataname, **kwargs):
-        maincode = dataname[0:2]
+        maincode = dataname[:2]
         subcode = dataname[2:6]
 
         datapath = os.path.join(self.p.basepath,

@@ -47,7 +47,7 @@ class OrderExecutionStrategy(bt.Strategy):
         dt = dt or self.data.datetime[0]
         if isinstance(dt, float):
             dt = bt.num2date(dt)
-        print('%s, %s' % (dt.isoformat(), txt))
+        print(f'{dt.isoformat()}, {txt}')
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -193,7 +193,7 @@ def getdata(args):
         yahoo_unreversed=btfeeds.YahooFinanceCSVData
     )
 
-    dfkwargs = dict()
+    dfkwargs = {}
     if args.csvformat == 'yahoo_unreversed':
         dfkwargs['reverse'] = True
 

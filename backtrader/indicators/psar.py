@@ -34,11 +34,12 @@ class _SarStatus(object):
     ep = 0.0
 
     def __str__(self):
-        txt = []
-        txt.append('sar: {}'.format(self.sar))
-        txt.append('tr: {}'.format(self.tr))
-        txt.append('af: {}'.format(self.af))
-        txt.append('ep: {}'.format(self.ep))
+        txt = [
+            f'sar: {self.sar}',
+            f'tr: {self.tr}',
+            f'af: {self.af}',
+            f'ep: {self.ep}',
+        ]
         return '\n'.join(txt)
 
 
@@ -146,10 +147,9 @@ class ParabolicSAR(PeriodN):
                 ep = hi
                 af = min(af + self.p.af, self.p.afmax)
 
-        else:  # downtrend
-            if lo < ep:
-                ep = lo
-                af = min(af + self.p.af, self.p.afmax)
+        elif lo < ep:
+            ep = lo
+            af = min(af + self.p.af, self.p.afmax)
 
         sar = sar + af * (ep - sar)  # calculate the sar for tomorrow
 

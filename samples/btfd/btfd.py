@@ -79,17 +79,16 @@ class St(bt.Strategy):
                                     self.data.datetime.date().isoformat(),
                                     self.data.close[0],
                                     float('NaN')]))
-        else:
-            if self.pctdown <= self.p.fall:
-                self.order_target_percent(target=self.p.target)
-                self.barexit = len(self) + self.p.hold
+        elif self.pctdown <= self.p.fall:
+            self.order_target_percent(target=self.p.target)
+            self.barexit = len(self) + self.p.hold
 
-                if self.p.prdata:
-                    print(','.join(str(x) for x in
-                                   ['DATA', 'OPEN',
-                                    self.data.datetime.date().isoformat(),
-                                    self.data.close[0],
-                                    self.pctdown[0]]))
+            if self.p.prdata:
+                print(','.join(str(x) for x in
+                               ['DATA', 'OPEN',
+                                self.data.datetime.date().isoformat(),
+                                self.data.close[0],
+                                self.pctdown[0]]))
 
     def start(self):
         if self.p.prtrade:
@@ -144,14 +143,12 @@ def runstrat(args=None):
 
     cerebro = bt.Cerebro()
 
-    # Data feed kwargs
-    kwargs = dict()
-
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
-    for a, d in ((getattr(args, x), x) for x in ['fromdate', 'todate']):
-        kwargs[d] = datetime.datetime.strptime(a, dtfmt + tmfmt * ('T' in a))
-
+    kwargs = {
+        d: datetime.datetime.strptime(a, dtfmt + tmfmt * ('T' in a))
+        for a, d in ((getattr(args, x), x) for x in ['fromdate', 'todate'])
+    }
     if not args.offline:
         YahooData = bt.feeds.YahooFinanceData
     else:
@@ -162,22 +159,22 @@ def runstrat(args=None):
     cerebro.adddata(data)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Add a commission
-    cerebro.broker.setcommission(**eval('dict(' + args.comminfo + ')'))
+    cerebro.broker.setcommission(**eval(f'dict({args.comminfo})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Add specific observer
-    cerebro.addobserver(ValueUnlever, **eval('dict(' + args.valobserver + ')'))
+    cerebro.addobserver(ValueUnlever, **eval(f'dict({args.valobserver})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

@@ -38,7 +38,7 @@ class SMACrossOver(bt.Strategy):
     def log(self, txt, dt=None):
         ''' Logging function fot this strategy'''
         dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
+        print(f'{dt.isoformat()}, {txt}')
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:

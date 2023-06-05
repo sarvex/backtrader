@@ -98,13 +98,10 @@ class BarPointPerc(with_metaclass(MetaParams, object)):
 
     def __call__(self, order, price, ago):
         data = order.data
-        minmov = self.p.minmov
-
-        parts = 1
-        if minmov:
-            # high - low + minmov to account for open ended minus op
+        if minmov := self.p.minmov:
             parts = (data.high[ago] - data.low[ago] + minmov) // minmov
-
+        else:
+            parts = 1
         alloc_vol = ((data.volume[ago] / parts) * self.p.perc) // 100.0
 
         # return max possible executable volume

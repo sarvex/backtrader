@@ -48,7 +48,7 @@ class ManualStopOrStopTrail(BaseStrategy):
     )
 
     def notify_order(self, order):
-        if not order.status == order.Completed:
+        if order.status != order.Completed:
             return  # discard any other notification
 
         if not self.position:  # we left the market
@@ -81,7 +81,7 @@ class ManualStopOrStopTrailCheat(BaseStrategy):
         self.broker.set_coc(True)
 
     def notify_order(self, order):
-        if not order.status == order.Completed:
+        if order.status != order.Completed:
             return  # discard any other notification
 
         if not self.position:  # we left the market
@@ -119,7 +119,7 @@ class AutoStopOrStopTrail(BaseStrategy):
                 order.executed.price, 'buy' if order.isbuy() else 'sell'))
             return
 
-        if not order.status == order.Completed:
+        if order.status != order.Completed:
             return  # discard any other notification
 
         if not self.position:  # we left the market
@@ -130,29 +130,30 @@ class AutoStopOrStopTrail(BaseStrategy):
         print('BUY @price: {:.2f}'.format(order.executed.price))
 
     def next(self):
-        if not self.position and self.crossup > 0:
-            if self.buy_order:  # something was pending
-                self.cancel(self.buy_order)
+        if self.position or self.crossup <= 0:
+            return
+        if self.buy_order:  # something was pending
+            self.cancel(self.buy_order)
 
-            # not in the market and signal triggered
-            if not self.p.buy_limit:
-                self.buy_order = self.buy(transmit=False)
-            else:
-                price = self.data.close[0] * (1.0 - self.p.buy_limit)
+        # not in the market and signal triggered
+        if not self.p.buy_limit:
+            self.buy_order = self.buy(transmit=False)
+        else:
+            price = self.data.close[0] * (1.0 - self.p.buy_limit)
 
-                # transmit = False ... await child order before transmission
-                self.buy_order = self.buy(price=price, exectype=bt.Order.Limit,
-                                          transmit=False)
+            # transmit = False ... await child order before transmission
+            self.buy_order = self.buy(price=price, exectype=bt.Order.Limit,
+                                      transmit=False)
 
-            # Setting parent=buy_order ... sends both together
-            if not self.p.trail:
-                stop_price = self.data.close[0] * (1.0 - self.p.stop_loss)
-                self.sell(exectype=bt.Order.Stop, price=stop_price,
-                          parent=self.buy_order)
-            else:
-                self.sell(exectype=bt.Order.StopTrail,
-                          trailamount=self.p.trail,
-                          parent=self.buy_order)
+        # Setting parent=buy_order ... sends both together
+        if not self.p.trail:
+            stop_price = self.data.close[0] * (1.0 - self.p.stop_loss)
+            self.sell(exectype=bt.Order.Stop, price=stop_price,
+                      parent=self.buy_order)
+        else:
+            self.sell(exectype=bt.Order.StopTrail,
+                      trailamount=self.p.trail,
+                      parent=self.buy_order)
 
 
 APPROACHES = dict(
@@ -168,7 +169,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -181,20 +182,20 @@ def runstrat(args=None):
     cerebro.adddata(data0)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
     StClass = APPROACHES[args.approach]
-    cerebro.addstrategy(StClass, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(StClass, **eval(f'dict({args.strat})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

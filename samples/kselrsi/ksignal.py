@@ -74,14 +74,14 @@ def runstrat(pargs=None):
     cerebro.adddata(data0)
 
     cerebro.addsizer(bt.sizers.FixedSize, stake=args.stake)
-    cerebro.addstrategy(TheStrategy, **(eval('dict(' + args.strat + ')')))
+    cerebro.addstrategy(TheStrategy, **eval(f'dict({args.strat})'))
     cerebro.addobserver(bt.observers.Value)
     cerebro.addobserver(bt.observers.Trades)
     cerebro.addobserver(bt.observers.BuySell, barplot=True)
 
     cerebro.run(stdstats=False)
     if args.plot:
-        cerebro.plot(**(eval('dict(' + args.plot + ')')))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

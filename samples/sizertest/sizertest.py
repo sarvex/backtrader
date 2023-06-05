@@ -52,10 +52,7 @@ class LongOnly(bt.Sizer):
 
         # Sell situation
         position = self.broker.getposition(data)
-        if not position.size:
-            return 0  # do not sell if nothing is open
-
-        return self.p.stake
+        return 0 if not position.size else self.p.stake
 
 
 class FixedReverser(bt.Sizer):
@@ -73,7 +70,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
     cerebro.broker.set_cash(args.cash)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -94,10 +91,7 @@ def runstrat(args=None):
 
     cerebro.run()
     if args.plot:
-        pkwargs = dict()
-        if args.plot is not True:  # evals to True but is not True
-            pkwargs = eval('dict(' + args.plot + ')')  # args were passed
-
+        pkwargs = eval(f'dict({args.plot})') if args.plot is not True else {}
         cerebro.plot(**pkwargs)
 
 
@@ -143,10 +137,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

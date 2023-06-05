@@ -64,7 +64,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -89,27 +89,25 @@ def runstrat(args=None):
     data1.plotinfo.plotmaster = data0
 
     # Broker
-    kwargs = eval('dict(' + args.broker + ')')
+    kwargs = eval(f'dict({args.broker})')
     cerebro.broker = bt.brokers.BackBroker(**kwargs)
 
     # Sizer
-    kwargs = eval('dict(' + args.sizer + ')')
+    kwargs = eval(f'dict({args.sizer})')
     cerebro.addsizer(bt.sizers.FixedSize, **kwargs)
 
-    # Strategy
-    if True:
-        kwargs = eval('dict(' + args.strat + ')')
-        cerebro.addstrategy(MACrossOver, **kwargs)
+    kwargs = eval(f'dict({args.strat})')
+    cerebro.addstrategy(MACrossOver, **kwargs)
 
     cerebro.addobserver(bt.observers.LogReturns2,
                         timeframe=bt.TimeFrame.Weeks,
                         compression=20)
 
     # Execute
-    cerebro.run(**(eval('dict(' + args.cerebro + ')')))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**(eval('dict(' + args.plot + ')')))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

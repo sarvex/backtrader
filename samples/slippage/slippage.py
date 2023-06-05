@@ -44,9 +44,8 @@ class SlipSt(bt.SignalStrategy):
 
     def notify_order(self, order):
         if order.status == bt.Order.Completed:
-            t = ''
-            t += '{:02d}'.format(next(self.opcounter))
-            t += ' {}'.format(order.data.datetime.datetime())
+            t = '' + '{:02d}'.format(next(self.opcounter))
+            t += f' {order.data.datetime.datetime()}'
             t += ' BUY ' * order.isbuy() or ' SELL'
             t += ' Size: {:+d} / Price: {:.2f}'
             print(t.format(order.executed.size, order.executed.price))
@@ -58,7 +57,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
     cerebro.broker.set_cash(args.cash)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate is not None:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -72,11 +71,7 @@ def runstrat(args=None):
     cerebro.adddata(data)
 
     cerebro.signal_strategy(SlipSt)
-    if not args.longonly:
-        stype = bt.signal.SIGNAL_LONGSHORT
-    else:
-        stype = bt.signal.SIGNAL_LONG
-
+    stype = bt.signal.SIGNAL_LONG if args.longonly else bt.signal.SIGNAL_LONGSHORT
     cerebro.add_signal(stype, SMACrossOver, p1=args.period1, p2=args.period2)
 
     if args.slip_perc is not None:
@@ -95,8 +90,8 @@ def runstrat(args=None):
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -159,10 +154,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

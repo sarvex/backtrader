@@ -76,11 +76,8 @@ class QuandlCSV(feed.CSVDataBase):
     def start(self):
         super(QuandlCSV, self).start()
 
-        if not self.params.reverse:
+        if not self.params.reverse or self._online:
             return
-        elif self._online:
-            return  # revers is True but also online, managed with order=asc
-
         # Quandl data can be in reverse order -> reverse
         dq = collections.deque()
         for line in self.f:
@@ -96,7 +93,7 @@ class QuandlCSV(feed.CSVDataBase):
         i = itertools.count(0)
 
         dttxt = linetokens[next(i)]  # YYYY-MM-DD
-        dt = date(int(dttxt[0:4]), int(dttxt[5:7]), int(dttxt[8:10]))
+        dt = date(int(dttxt[:4]), int(dttxt[5:7]), int(dttxt[8:10]))
         dtnum = date2num(datetime.combine(dt, self.p.sessionend))
 
         self.lines.datetime[0] = dtnum
@@ -189,23 +186,22 @@ class Quandl(QuandlCSV):
     def start(self):
         self.error = None
 
-        url = '{}/{}/{}.csv'.format(
-            self.p.baseurl, self.p.dataset, urlquote(self.p.dataname))
+        url = f'{self.p.baseurl}/{self.p.dataset}/{urlquote(self.p.dataname)}.csv'
 
         urlargs = []
         if self.p.reverse:
             urlargs.append('order=asc')
 
         if self.p.apikey is not None:
-            urlargs.append('api_key={}'.format(self.p.apikey))
+            urlargs.append(f'api_key={self.p.apikey}')
 
         if self.p.fromdate:
             dtxt = self.p.fromdate.strftime('%Y-%m-%d')
-            urlargs.append('start_date={}'.format(dtxt))
+            urlargs.append(f'start_date={dtxt}')
 
         if self.p.todate:
             dtxt = self.p.todate.strftime('%Y-%m-%d')
-            urlargs.append('end_date={}'.format(dtxt))
+            urlargs.append(f'end_date={dtxt}')
 
         if urlargs:
             url += '?' + '&'.join(urlargs)
@@ -223,7 +219,7 @@ class Quandl(QuandlCSV):
             return
 
         if datafile.headers['Content-Type'] != 'text/csv':
-            self.error = 'Wrong content type: %s' % datafile.headers
+            self.error = f'Wrong content type: {datafile.headers}'
             return  # HTML returned? wrong url?
 
         if self.params.buffered:

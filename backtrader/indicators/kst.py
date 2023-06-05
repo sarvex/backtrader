@@ -70,8 +70,10 @@ class KnowSureThing(bt.Indicator):
         rcma2 = self.p._rmovav(ROC100(period=self.p.rp2), period=self.p.rma2)
         rcma3 = self.p._rmovav(ROC100(period=self.p.rp3), period=self.p.rma3)
         rcma4 = self.p._rmovav(ROC100(period=self.p.rp4), period=self.p.rma4)
-        self.l.kst = sum([rfi * rci for rfi, rci in
-                          zip(self.p.rfactors, [rcma1, rcma2, rcma3, rcma4])])
+        self.l.kst = sum(
+            rfi * rci
+            for rfi, rci in zip(self.p.rfactors, [rcma1, rcma2, rcma3, rcma4])
+        )
 
         self.l.signal = self.p._smovav(self.l.kst, period=self.p.rsignal)
         super(KnowSureThing, self).__init__()

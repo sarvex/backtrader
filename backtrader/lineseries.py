@@ -134,10 +134,10 @@ class Lines(object):
         # str for Python 2/3 compatibility
         basecls = cls if not linesoverride else Lines
 
-        newcls = type(str(cls.__name__ + '_' + name), (basecls,), {})
+        newcls = type(str(f'{cls.__name__}_{name}'), (basecls,), {})
         clsmodule = sys.modules[cls.__module__]
         newcls.__module__ = cls.__module__
-        setattr(clsmodule, str(cls.__name__ + '_' + name), newcls)
+        setattr(clsmodule, str(f'{cls.__name__}_{name}'), newcls)
 
         setattr(newcls, '_getlinesbase', classmethod(lambda cls: baselines))
         setattr(newcls, '_getlines', classmethod(lambda cls: clslines))
@@ -184,26 +184,23 @@ class Lines(object):
         Return the alias for a line given the index
         '''
         lines = cls._getlines()
-        if i >= len(lines):
-            return ''
-        linealias = lines[i]
-        return linealias
+        return '' if i >= len(lines) else lines[i]
 
     @classmethod
     def getlinealiases(cls):
         return cls._getlines()
 
     def itersize(self):
-        return iter(self.lines[0:self.size()])
+        return iter(self.lines[:self.size()])
 
     def __init__(self, initlines=None):
         '''
         Create the lines recording during "_derive" or else use the
         provided "initlines"
         '''
-        self.lines = list()
-        for line, linealias in enumerate(self._getlines()):
-            kwargs = dict()
+        self.lines = []
+        for _ in self._getlines():
+            kwargs = {}
             self.lines.append(LineBuffer(**kwargs))
 
         # Add the required extralines
@@ -352,7 +349,7 @@ class MetaLineSeries(LineMultiple.__class__):
         # Check the line aliases before creating the lines
         lalias = getattr(cls, 'linealias', AutoInfoClass)
         oblalias = [x.linealias for x in bases[1:] if hasattr(x, 'linealias')]
-        cls.linealias = la = lalias._derive('la_' + name, newlalias, oblalias)
+        cls.linealias = la = lalias._derive(f'la_{name}', newlalias, oblalias)
 
         # Get the actual lines or a default
         lines = getattr(cls, 'lines', Lines)
@@ -370,19 +367,19 @@ class MetaLineSeries(LineMultiple.__class__):
 
         # Create a plotinfo/plotlines subclass and set it in the class
         morebasesplotinfo = \
-            [x.plotinfo for x in bases[1:] if hasattr(x, 'plotinfo')]
-        cls.plotinfo = plotinfo._derive('pi_' + name, newplotinfo,
-                                        morebasesplotinfo)
+                [x.plotinfo for x in bases[1:] if hasattr(x, 'plotinfo')]
+        cls.plotinfo = plotinfo._derive(f'pi_{name}', newplotinfo, morebasesplotinfo)
 
         # Before doing plotline newlines have been added and no plotlineinfo
         # is there add a default
         for line in newlines:
-            newplotlines.setdefault(line, dict())
+            newplotlines.setdefault(line, {})
 
         morebasesplotlines = \
-            [x.plotlines for x in bases[1:] if hasattr(x, 'plotlines')]
+                [x.plotlines for x in bases[1:] if hasattr(x, 'plotlines')]
         cls.plotlines = plotlines._derive(
-            'pl_' + name, newplotlines, morebasesplotlines, recurse=True)
+            f'pl_{name}', newplotlines, morebasesplotlines, recurse=True
+        )
 
         # create declared class aliases (a subclass with no modifications)
         for alias in aliases:
@@ -403,29 +400,29 @@ class MetaLineSeries(LineMultiple.__class__):
         # return the class
         return cls
 
-    def donew(cls, *args, **kwargs):
+    def donew(self, *args, **kwargs):
         '''
         Intercept instance creation, take over lines/plotinfo/plotlines
         class attributes by creating corresponding instance variables and add
         aliases for "lines" and the "lines" held within it
         '''
         # _obj.plotinfo shadows the plotinfo (class) definition in the class
-        plotinfo = cls.plotinfo()
+        plotinfo = self.plotinfo()
 
-        for pname, pdef in cls.plotinfo._getitems():
+        for pname, pdef in self.plotinfo._getitems():
             setattr(plotinfo, pname, kwargs.pop(pname, pdef))
 
         # Create the object and set the params in place
-        _obj, args, kwargs = super(MetaLineSeries, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MetaLineSeries, self).donew(*args, **kwargs)
 
         # set the plotinfo member in the class
         _obj.plotinfo = plotinfo
 
         # _obj.lines shadows the lines (class) definition in the class
-        _obj.lines = cls.lines()
+        _obj.lines = self.lines()
 
         # _obj.plotinfo shadows the plotinfo (class) definition in the class
-        _obj.plotlines = cls.plotlines()
+        _obj.plotlines = self.plotlines()
 
         # add aliases for lines and for the lines class itself
         _obj.l = _obj.lines
@@ -433,7 +430,7 @@ class MetaLineSeries(LineMultiple.__class__):
             _obj.line = _obj.lines[0]
 
         for l, line in enumerate(_obj.lines):
-            setattr(_obj, 'line_%s' % l, _obj._getlinealias(l))
+            setattr(_obj, f'line_{l}', _obj._getlinealias(l))
             setattr(_obj, 'line_%d' % l, line)
             setattr(_obj, 'line%d' % l, line)
 
@@ -475,12 +472,10 @@ class LineSeries(with_metaclass(MetaLineSeries, LineMultiple)):
         # in lineiterator later, because object.__init__ has no im_func
         # (object has slots)
         super(LineSeries, self).__init__()
-        pass
 
     def plotlabel(self):
         label = self.plotinfo.plotname or self.__class__.__name__
-        sublabels = self._plotlabel()
-        if sublabels:
+        if sublabels := self._plotlabel():
             for i, sublabel in enumerate(sublabels):
                 # if isinstance(sublabel, LineSeries): ## DOESN'T WORK ???
                 if hasattr(sublabel, 'plotinfo'):
@@ -491,7 +486,7 @@ class LineSeries(with_metaclass(MetaLineSeries, LineMultiple)):
 
                     sublabels[i] = s or sublabel.__name__
 
-            label += ' (%s)' % ', '.join(map(str, sublabels))
+            label += f" ({', '.join(map(str, sublabels))})"
         return label
 
     def _plotlabel(self):
@@ -499,15 +494,12 @@ class LineSeries(with_metaclass(MetaLineSeries, LineMultiple)):
 
     def _getline(self, line, minusall=False):
         if isinstance(line, string_types):
-            lineobj = getattr(self.lines, line)
-        else:
-            if line == -1:  # restore original api behavior - default -> 0
-                if minusall:  # minus means ... all lines
-                    return None
-                line = 0
-            lineobj = self.lines[line]
-
-        return lineobj
+            return getattr(self.lines, line)
+        if line == -1:  # restore original api behavior - default -> 0
+            if minusall:  # minus means ... all lines
+                return None
+            line = 0
+        return self.lines[line]
 
     def __call__(self, ago=None, line=-1):
         '''Returns either a delayed verison of itself in the form of a
@@ -638,7 +630,4 @@ class LineSeriesStub(LineSeries):
 
 
 def LineSeriesMaker(arg, slave=False):
-    if isinstance(arg, LineSeries):
-        return arg
-
-    return LineSeriesStub(arg, slave=slave)
+    return arg if isinstance(arg, LineSeries) else LineSeriesStub(arg, slave=slave)

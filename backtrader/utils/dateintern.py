@@ -103,16 +103,10 @@ class _UTC(datetime.tzinfo):
 class _LocalTimezone(datetime.tzinfo):
 
     def utcoffset(self, dt):
-        if self._isdst(dt):
-            return DSTOFFSET
-        else:
-            return STDOFFSET
+        return DSTOFFSET if self._isdst(dt) else STDOFFSET
 
     def dst(self, dt):
-        if self._isdst(dt):
-            return DSTDIFF
-        else:
-            return ZERO
+        return DSTDIFF if self._isdst(dt) else ZERO
 
     def tzname(self, dt):
         return _time.tzname[self._isdst(dt)]
@@ -172,7 +166,7 @@ def num2date(x, tz=None, naive=True):
     if microsecond < 10:
         microsecond = 0  # compensate for rounding errors
 
-    if True and tz is not None:
+    if tz is not None:
         dt = datetime.datetime(
             dt.year, dt.month, dt.day, int(hour), int(minute), int(second),
             microsecond, tzinfo=UTC)
@@ -232,9 +226,9 @@ def time2num(tm):
     Converts the hour/minute/second/microsecond part of tm (datetime.datetime
     or time) to a num
     """
-    num = (tm.hour / HOURS_PER_DAY +
-           tm.minute / MINUTES_PER_DAY +
-           tm.second / SECONDS_PER_DAY +
-           tm.microsecond / MUSECONDS_PER_DAY)
-
-    return num
+    return (
+        tm.hour / HOURS_PER_DAY
+        + tm.minute / MINUTES_PER_DAY
+        + tm.second / SECONDS_PER_DAY
+        + tm.microsecond / MUSECONDS_PER_DAY
+    )

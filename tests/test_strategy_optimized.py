@@ -70,7 +70,7 @@ class TestStrategy(bt.Strategy):
     def log(self, txt, dt=None):
         dt = dt or self.data.datetime[0]
         dt = bt.num2date(dt)
-        print('%s, %s' % (dt.isoformat(), txt))
+        print(f'{dt.isoformat()}, {txt}')
 
     def __init__(self):
         # Flag to allow new orders in the system or not
@@ -125,8 +125,8 @@ def test_run(main=False):
     for runonce in [True, False]:
         for preload in [True, False]:
             for exbar in [True, False, -1, -2]:
-                _chkvalues = list()
-                _chkcash = list()
+                _chkvalues = []
+                _chkcash = []
 
                 datas = [testcommon.getdata(i) for i in range(chkdatas)]
                 testcommon.runtest(datas,

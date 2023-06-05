@@ -44,11 +44,11 @@ class FixedPerc(bt.Sizer):
 
     def _getsizing(self, comminfo, cash, data, isbuy):
         cashtouse = self.p.perc * cash
-        if BTVERSION > (1, 7, 1, 93):
-            size = comminfo.getsize(data.close[0], cashtouse)
-        else:
-            size = cashtouse // data.close[0]
-        return size
+        return (
+            comminfo.getsize(data.close[0], cashtouse)
+            if BTVERSION > (1, 7, 1, 93)
+            else cashtouse // data.close[0]
+        )
 
 
 class TheStrategy(bt.Strategy):
@@ -83,9 +83,6 @@ class TheStrategy(bt.Strategy):
     )
 
     def notify_order(self, order):
-        if order.status == order.Completed:
-            pass
-
         if not order.alive():
             self.order = None  # indicate no order is pending
 
@@ -112,13 +109,7 @@ class TheStrategy(bt.Strategy):
         if self.order:
             return  # pending order execution
 
-        if not self.position:  # not in the market
-            if self.mcross[0] > 0.0 and self.smadir < 0.0:
-                self.order = self.buy()
-                pdist = self.atr[0] * self.p.atrdist
-                self.pstop = self.data.close[0] - pdist
-
-        else:  # in the market
+        if self.position:  # in the market
             pclose = self.data.close[0]
             pstop = self.pstop
 
@@ -128,6 +119,10 @@ class TheStrategy(bt.Strategy):
                 pdist = self.atr[0] * self.p.atrdist
                 # Update only if greater than
                 self.pstop = max(pstop, pclose - pdist)
+
+        elif self.mcross[0] > 0.0 and self.smadir < 0.0:
+            self.order = self.buy()
+            self.pstop = self.data.close[0] - self.atr[0] * self.p.atrdist
 
 
 DATASETS = {
@@ -147,7 +142,7 @@ def runstrat(args=None):
 
     cerebro.broker.addcommissioninfo(comminfo)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate is not None:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -197,8 +192,8 @@ def runstrat(args=None):
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -279,10 +274,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

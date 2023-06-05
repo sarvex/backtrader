@@ -114,12 +114,7 @@ def PumpEvents(timeout=-1, hevt=None, cb=None):
 
         try:
             res = ctypes.oledll.ole32.CoWaitForMultipleHandles(
-                0,  # COWAIT_FLAGS
-                int(tmout),  # dwtimeout
-                len(handles),  # number of handles in handles
-                handles,  # handles array
-                # pointer to indicate which handle was signaled
-                ctypes.byref(ctypes.c_ulong())
+                0, tmout, len(handles), handles, ctypes.byref(ctypes.c_ulong())
             )
 
         except WindowsError as details:
@@ -172,16 +167,15 @@ class RTEventSink(object):
 
 class MetaSingleton(MetaParams):
     '''Metaclass to make a metaclassed class a singleton'''
-    def __init__(cls, name, bases, dct):
-        super(MetaSingleton, cls).__init__(name, bases, dct)
-        cls._singleton = None
+    def __init__(self, name, bases, dct):
+        super(MetaSingleton, self).__init__(name, bases, dct)
+        self._singleton = None
 
-    def __call__(cls, *args, **kwargs):
-        if cls._singleton is None:
-            cls._singleton = (
-                super(MetaSingleton, cls).__call__(*args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        if self._singleton is None:
+            self._singleton = super(MetaSingleton, self).__call__(*args, **kwargs)
 
-        return cls._singleton
+        return self._singleton
 
 
 class VCStore(with_metaclass(MetaSingleton, object)):
@@ -309,8 +303,8 @@ class VCStore(with_metaclass(MetaSingleton, object)):
 
         # hold deques to market data symbols
         self._dqs = collections.deque()
-        self._qdatas = dict()
-        self._tftable = dict()
+        self._qdatas = {}
+        self._tftable = {}
 
         if not self._load_comtypes():
             txt = 'Failed to import comtypes'
@@ -328,7 +322,7 @@ class VCStore(with_metaclass(MetaSingleton, object)):
             self.vcdsmod = None
             self.vcrtmod = None
             self.vcctmod = None
-            txt = 'Failed to Load COM TypeLib Modules {}'.format(e)
+            txt = f'Failed to Load COM TypeLib Modules {e}'
             msg = self._RT_TYPELIB, txt
             self.put_notification(msg, *msg)
             return
@@ -339,10 +333,7 @@ class VCStore(with_metaclass(MetaSingleton, object)):
             # self.vcrt = self.CreateObject(self.vcrtmod.RealTime)
             self.vcct = self.CreateObject(self.vcctmod.Trader)
         except WindowsError as e:
-            txt = ('Failed to Load COM TypeLib Objects but the COM TypeLibs '
-                   'have been loaded. If VisualChart has been recently '
-                   'installed/updated, restarting Windows may be necessary '
-                   'to register the Objects: {}'.format(e))
+            txt = f'Failed to Load COM TypeLib Objects but the COM TypeLibs have been loaded. If VisualChart has been recently installed/updated, restarting Windows may be necessary to register the Objects: {e}'
             msg = self._RT_TYPELIB, txt
             self.put_notification(msg, *msg)
             self.vcds = None
@@ -353,7 +344,7 @@ class VCStore(with_metaclass(MetaSingleton, object)):
         self._connected = True
 
         # Build a table of VCRT Field_XX mappings for debugging purposes
-        self.vcrtfields = dict()
+        self.vcrtfields = {}
         for name in dir(self.vcrtmod):
             if name.startswith('Field'):
                 self.vcrtfields[getattr(self.vcrtmod, name)] = name
@@ -376,7 +367,7 @@ class VCStore(with_metaclass(MetaSingleton, object)):
     def get_notifications(self):
         '''Return the pending "store" notifications'''
         self.notifs.append(None)  # Mark current end of notifs
-        return [x for x in iter(self.notifs.popleft, None)]  # popleft til None
+        return list(iter(self.notifs.popleft, None))
 
     def start(self, data=None, broker=None):
         if not self._connected:
@@ -524,8 +515,6 @@ class VCStore(with_metaclass(MetaSingleton, object)):
             dsconn = None
         else:
             dsconn = self.GetEvents(vcds, data)  # finally connect the events
-            pass
-
         # pump events in this thread - call ping
         PumpEvents(timeout=data._getpingtmout, cb=data.ping)
         if dsconn is not None:

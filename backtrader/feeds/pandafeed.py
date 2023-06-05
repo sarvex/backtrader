@@ -165,16 +165,12 @@ class PandasData(feed.DataBase):
 
         # these "colnames" can be strings or numeric types
         colnames = list(self.p.dataname.columns.values)
-        if self.p.datetime is None:
-            # datetime is expected as index col and hence not returned
-            pass
-
         # try to autodetect if all columns are numeric
         cstrings = filter(lambda x: isinstance(x, string_types), colnames)
         colsnumeric = not len(list(cstrings))
 
         # Where each datafield find its value
-        self._colmapping = dict()
+        self._colmapping = {}
 
         # Build the column mappings to internal fields in advance
         for datafield in self.getlinealiases():
@@ -211,17 +207,14 @@ class PandasData(feed.DataBase):
         if self.p.nocase:
             colnames = [x.lower() for x in self.p.dataname.columns.values]
         else:
-            colnames = [x for x in self.p.dataname.columns.values]
+            colnames = list(self.p.dataname.columns.values)
 
         for k, v in self._colmapping.items():
             if v is None:
                 continue  # special marker for datetime
             if isinstance(v, string_types):
                 try:
-                    if self.p.nocase:
-                        v = colnames.index(v.lower())
-                    else:
-                        v = colnames.index(v)
+                    v = colnames.index(v.lower()) if self.p.nocase else colnames.index(v)
                 except ValueError as e:
                     defmap = getattr(self.params, k)
                     if isinstance(defmap, integer_types) and defmap < 0:

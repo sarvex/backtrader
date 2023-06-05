@@ -41,45 +41,46 @@ class St(bt.Strategy):
         self.crossover = bt.indicators.CrossOver(self.data, sma)
 
     def start(self):
-        if self.p.printout:
-            txtfields = list()
-            txtfields.append('Len')
-            txtfields.append('Datetime')
-            txtfields.append('Open')
-            txtfields.append('High')
-            txtfields.append('Low')
-            txtfields.append('Close')
-            txtfields.append('Volume')
-            txtfields.append('OpenInterest')
-            print(','.join(txtfields))
+        if not self.p.printout:
+            return
+        txtfields = [
+            'Len',
+            'Datetime',
+            'Open',
+            'High',
+            'Low',
+            'Close',
+            'Volume',
+            'OpenInterest',
+        ]
+        print(','.join(txtfields))
 
     def next(self):
         if self.p.printout:
             # Print only 1st data ... is just a check that things are running
-            txtfields = list()
-            txtfields.append('%04d' % len(self))
-            txtfields.append(self.data.datetime.datetime(0).isoformat())
-            txtfields.append('%.2f' % self.data0.open[0])
-            txtfields.append('%.2f' % self.data0.high[0])
-            txtfields.append('%.2f' % self.data0.low[0])
-            txtfields.append('%.2f' % self.data0.close[0])
-            txtfields.append('%.2f' % self.data0.volume[0])
-            txtfields.append('%.2f' % self.data0.openinterest[0])
+            txtfields = ['%04d' % len(self), self.data.datetime.datetime(0).isoformat()]
+            txtfields.extend(
+                (
+                    '%.2f' % self.data0.open[0],
+                    '%.2f' % self.data0.high[0],
+                    '%.2f' % self.data0.low[0],
+                    '%.2f' % self.data0.close[0],
+                    '%.2f' % self.data0.volume[0],
+                    '%.2f' % self.data0.openinterest[0],
+                )
+            )
             print(','.join(txtfields))
 
         if self.position:
             if self.crossover < 0.0:
                 if self.p.printout:
-                    print('CLOSE {} @%{}'.format(size,
-                                                 self.data.close[0]))
+                    print(f'CLOSE {size} @%{self.data.close[0]}')
                 self.close()
 
-        else:
-            if self.crossover > 0.0:
-                self.buy(size=self.p.stake)
-                if self.p.printout:
-                    print('BUY   {} @%{}'.format(self.p.stake,
-                                                self.data.close[0]))
+        elif self.crossover > 0.0:
+            self.buy(size=self.p.stake)
+            if self.p.printout:
+                print(f'BUY   {self.p.stake} @%{self.data.close[0]}')
 
 
 TIMEFRAMES = {
@@ -98,7 +99,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
     cerebro.broker.set_cash(args.cash)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -132,10 +133,7 @@ def runstrat(args=None):
     cerebro.run()
 
     if args.plot:
-        pkwargs = dict()
-        if args.plot is not True:  # evals to True but is not True
-            pkwargs = eval('dict(' + args.plot + ')')  # args were passed
-
+        pkwargs = eval(f'dict({args.plot})') if args.plot is not True else {}
         cerebro.plot(**pkwargs)
 
 
@@ -196,10 +194,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs else parser.parse_args()
 
 
 if __name__ == '__main__':

@@ -95,11 +95,10 @@ class PeriodStats(bt.Analyzer):
                 pos += 1
             elif tret < 0.0:
                 neg += 1
+            elif self.p.zeroispos:
+                pos += tret == 0.0
             else:
-                if self.p.zeroispos:
-                    pos += tret == 0.0
-                else:
-                    nul += tret == 0.0
+                nul += tret == 0.0
 
         self.rets['average'] = avg = average(trets)
         self.rets['stddev'] = standarddev(trets, avg)

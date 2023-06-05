@@ -43,8 +43,7 @@ class _AroonBase(Indicator):
     plotinfo = dict(plotymargin=0.05, plotyhlines=[0, 100])
 
     def _plotlabel(self):
-        plabels = [self.p.period]
-        return plabels
+        return [self.p.period]
 
     def _plotinit(self):
         self.plotinfo.plotyhlines += [self.p.lowerband, self.p.upperband]

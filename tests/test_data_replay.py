@@ -34,7 +34,7 @@ chkvals = [
 
 chkmin = 30  # period will be in weeks
 chkind = [btind.SMA]
-chkargs = dict()
+chkargs = {}
 
 
 def test_run(main=False, exbar=False):

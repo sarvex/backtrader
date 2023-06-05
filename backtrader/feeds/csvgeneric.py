@@ -108,8 +108,8 @@ class GenericCSVData(feed.CSVDataBase):
 
             if self.p.time >= 0:
                 # add time value and format if it's in a separate field
-                dtfield += 'T' + linetokens[self.p.time]
-                dtformat += 'T' + self.p.tmformat
+                dtfield += f'T{linetokens[self.p.time]}'
+                dtformat += f'T{self.p.tmformat}'
 
             dt = datetime.strptime(dtfield, dtformat)
         else:
@@ -117,11 +117,7 @@ class GenericCSVData(feed.CSVDataBase):
 
         if self.p.timeframe >= TimeFrame.Days:
             # check if the expected end of session is larger than parsed
-            if self._tzinput:
-                dtin = self._tzinput.localize(dt)  # pytz compatible-ized
-            else:
-                dtin = dt
-
+            dtin = self._tzinput.localize(dt) if self._tzinput else dt
             dtnum = date2num(dtin)  # utc'ize
 
             dteos = datetime.combine(dt.date(), self.p.sessionend)
@@ -153,7 +149,7 @@ class GenericCSVData(feed.CSVDataBase):
 
             # get the corresponding line reference and set the value
             line = getattr(self.lines, linefield)
-            line[0] = float(float(csvfield))
+            line[0] = float(csvfield)
 
         return True
 

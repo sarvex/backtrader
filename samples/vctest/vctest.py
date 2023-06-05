@@ -46,7 +46,7 @@ class TestStrategy(bt.Strategy):
 
     def __init__(self):
         # To control operation entries
-        self.orderid = list()
+        self.orderid = []
         self.order = None
 
         self.counttostop = 0
@@ -85,31 +85,38 @@ class TestStrategy(bt.Strategy):
         self.next(frompre=True)
 
     def next(self, frompre=False):
-        txt = list()
-        txt.append('%04d' % len(self))
         dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-        txt.append('%s' % self.data.datetime.datetime(0).strftime(dtfmt))
-        txt.append('{}'.format(self.data.open[0]))
-        txt.append('{}'.format(self.data.high[0]))
-        txt.append('{}'.format(self.data.low[0]))
-        txt.append('{}'.format(self.data.close[0]))
-        txt.append('{}'.format(self.data.volume[0]))
-        txt.append('{}'.format(self.data.openinterest[0]))
-        txt.append('{}'.format(self.sma[0]))
+        txt = [
+            '%04d' % len(self),
+            *(
+                f'{self.data.datetime.datetime(0).strftime(dtfmt)}',
+                f'{self.data.open[0]}',
+                f'{self.data.high[0]}',
+                f'{self.data.low[0]}',
+                f'{self.data.close[0]}',
+                f'{self.data.volume[0]}',
+                f'{self.data.openinterest[0]}',
+                f'{self.sma[0]}',
+            ),
+        ]
         print(', '.join(txt))
 
         if len(self.datas) > 1:
-            txt = list()
+            txt = []
             txt.append('%04d' % len(self))
             dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-            txt.append('%s' % self.data1.datetime.datetime(0).strftime(dtfmt))
-            txt.append('{}'.format(self.data1.open[0]))
-            txt.append('{}'.format(self.data1.high[0]))
-            txt.append('{}'.format(self.data1.low[0]))
-            txt.append('{}'.format(self.data1.close[0]))
-            txt.append('{}'.format(self.data1.volume[0]))
-            txt.append('{}'.format(self.data1.openinterest[0]))
-            txt.append('{}'.format(float('NaN')))
+            txt.extend(
+                (
+                    f'{self.data1.datetime.datetime(0).strftime(dtfmt)}',
+                    f'{self.data1.open[0]}',
+                    f'{self.data1.high[0]}',
+                    f'{self.data1.low[0]}',
+                    f'{self.data1.close[0]}',
+                    f'{self.data1.volume[0]}',
+                    f'{self.data1.openinterest[0]}',
+                    f"{float('NaN')}",
+                )
+            )
             print(', '.join(txt))
 
         if self.counttostop:  # stop after x live lines
@@ -158,7 +165,7 @@ def runstrategy():
     # Create a cerebro
     cerebro = bt.Cerebro()
 
-    storekwargs = dict()
+    storekwargs = {}
 
     if not args.nostore:
         vcstore = bt.stores.VCStore(**storekwargs)
@@ -201,7 +208,7 @@ def runstrategy():
     )
 
     if args.nostore and not args.broker:   # neither store nor broker
-        datakwargs.update(storekwargs)  # pass the store args over the data
+        datakwargs |= storekwargs
 
     data0 = VCDataFactory(dataname=args.data0, tradename=args.tradename,
                           **datakwargs)

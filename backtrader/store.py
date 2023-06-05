@@ -29,16 +29,15 @@ from backtrader.utils.py3 import with_metaclass
 
 class MetaSingleton(MetaParams):
     '''Metaclass to make a metaclassed class a singleton'''
-    def __init__(cls, name, bases, dct):
-        super(MetaSingleton, cls).__init__(name, bases, dct)
-        cls._singleton = None
+    def __init__(self, name, bases, dct):
+        super(MetaSingleton, self).__init__(name, bases, dct)
+        self._singleton = None
 
-    def __call__(cls, *args, **kwargs):
-        if cls._singleton is None:
-            cls._singleton = (
-                super(MetaSingleton, cls).__call__(*args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        if self._singleton is None:
+            self._singleton = super(MetaSingleton, self).__call__(*args, **kwargs)
 
-        return cls._singleton
+        return self._singleton
 
 
 class Store(with_metaclass(MetaSingleton, object)):
@@ -68,7 +67,7 @@ class Store(with_metaclass(MetaSingleton, object)):
         if not self._started:
             self._started = True
             self.notifs = collections.deque()
-            self.datas = list()
+            self.datas = []
             self.broker = None
 
         if data is not None:
@@ -91,4 +90,4 @@ class Store(with_metaclass(MetaSingleton, object)):
     def get_notifications(self):
         '''Return the pending "store" notifications'''
         self.notifs.append(None)  # put a mark / threads could still append
-        return [x for x in iter(self.notifs.popleft, None)]
+        return list(iter(self.notifs.popleft, None))

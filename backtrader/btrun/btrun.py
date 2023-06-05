@@ -79,24 +79,24 @@ def btrun(pargs=''):
     stdstats = not args.nostdstats
 
     cer_kwargs_str = args.cerebro
-    cer_kwargs = eval('dict(' + cer_kwargs_str + ')')
+    cer_kwargs = eval(f'dict({cer_kwargs_str})')
     if 'stdstats' not in cer_kwargs:
         cer_kwargs.update(stdstats=stdstats)
 
     cerebro = bt.Cerebro(**cer_kwargs)
 
-    if args.resample is not None or args.replay is not None:
-        if args.resample is not None:
-            tfcp = args.resample.split(':')
-        elif args.replay is not None:
-            tfcp = args.replay.split(':')
+    if args.resample is not None:
+        tfcp = args.resample.split(':')
+        # compression may be skipped and it will default to 1
+        tf, cp = (tfcp[0], 1) if len(tfcp) == 1 or tfcp[1] == '' else tfcp
+        cp = int(cp)  # convert any value to int
+        tf = TIMEFRAMES.get(tf, None)
+
+    elif args.replay is not None:
+        tfcp = args.replay.split(':')
 
         # compression may be skipped and it will default to 1
-        if len(tfcp) == 1 or tfcp[1] == '':
-            tf, cp = tfcp[0], 1
-        else:
-            tf, cp = tfcp
-
+        tf, cp = (tfcp[0], 1) if len(tfcp) == 1 or tfcp[1] == '' else tfcp
         cp = int(cp)  # convert any value to int
         tf = TIMEFRAMES.get(tf, None)
 
@@ -111,7 +111,7 @@ def btrun(pargs=''):
     # get and add signals
     signals = getobjects(args.signals, bt.Indicator, bt.signals, issignal=True)
     for sig, kwargs, sigtype in signals:
-        stype = getattr(bt.signal, 'SIGNAL_' + sigtype.upper())
+        stype = getattr(bt.signal, f'SIGNAL_{sigtype.upper()}')
         cerebro.add_signal(stype, sig, **kwargs)
 
     # get and add strategies
@@ -134,7 +134,7 @@ def btrun(pargs=''):
     setbroker(args, cerebro)
 
     for wrkwargs_str in args.writers or []:
-        wrkwargs = eval('dict(' + wrkwargs_str + ')')
+        wrkwargs = eval(f'dict({wrkwargs_str})')
         cerebro.addwriter(bt.WriterFile, **wrkwargs)
 
     ans = getfunctions(args.hooks, bt.Cerebro)
@@ -143,26 +143,31 @@ def btrun(pargs=''):
     runsts = cerebro.run()
     runst = runsts[0]  # single strategy and no optimization
 
-    if args.pranalyzer or args.ppranalyzer:
-        if runst.analyzers:
-            print('====================')
-            print('== Analyzers')
-            print('====================')
-            for name, analyzer in runst.analyzers.getitems():
-                if args.pranalyzer:
-                    analyzer.print()
-                elif args.ppranalyzer:
-                    print('##########')
-                    print(name)
-                    print('##########')
-                    analyzer.pprint()
+    if (
+        args.pranalyzer
+        and runst.analyzers
+        or not args.pranalyzer
+        and args.ppranalyzer
+        and runst.analyzers
+    ):
+        print('====================')
+        print('== Analyzers')
+        print('====================')
+        for name, analyzer in runst.analyzers.getitems():
+            if args.pranalyzer:
+                analyzer.print()
+            elif args.ppranalyzer:
+                print('##########')
+                print(name)
+                print('##########')
+                analyzer.pprint()
 
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:
             # evaluates to True but is not "True" - args were passed
-            ekwargs = eval('dict(' + args.plot + ')')
-            pkwargs.update(ekwargs)
+            ekwargs = eval(f'dict({args.plot})')
+            pkwargs |= ekwargs
 
         # cerebro.plot(numfigs=args.plotfigs, style=args.plotstyle)
         cerebro.plot(**pkwargs)
@@ -174,7 +179,7 @@ def setbroker(args, cerebro):
     if args.cash is not None:
         broker.setcash(args.cash)
 
-    commkwargs = dict()
+    commkwargs = {}
     if args.commission is not None:
         commkwargs['commission'] = args.commission
     if args.margin is not None:
@@ -206,7 +211,7 @@ def getdatas(args):
     dfcls = DATAFORMATS[args.format]
 
     # Prepare some args
-    dfkwargs = dict()
+    dfkwargs = {}
     if args.format == 'yahoo_unreversed':
         dfkwargs['reverse'] = True
 
@@ -233,7 +238,7 @@ def getdatas(args):
     if args.compression is not None:
         dfkwargs['compression'] = args.compression
 
-    datas = list()
+    datas = []
     for dname in args.data:
         dfkwargs['dataname'] = dname
         data = dfcls(**dfkwargs)
@@ -245,7 +250,7 @@ def getdatas(args):
 def getmodclasses(mod, clstype, clsname=None):
     clsmembers = inspect.getmembers(mod, inspect.isclass)
 
-    clslist = list()
+    clslist = []
     for name, cls in clsmembers:
         if not issubclass(cls, clstype):
             continue
@@ -264,7 +269,7 @@ def getmodfunctions(mod, funcname=None):
     members = inspect.getmembers(mod, inspect.isfunction) + \
         inspect.getmembers(mod, inspect.ismethod)
 
-    funclist = list()
+    funclist = []
     for name, member in members:
         if funcname:
             if name == funcname:
@@ -320,7 +325,7 @@ def loadmodule3(modpath, modname):
 
 
 def getobjects(iterable, clsbase, modbase, issignal=False):
-    retobjects = list()
+    retobjects = []
 
     for item in iterable or []:
         if issignal:
@@ -335,16 +340,16 @@ def getobjects(iterable, clsbase, modbase, issignal=False):
         if len(tokens) == 1:
             modpath = tokens[0]
             name = ''
-            kwargs = dict()
+            kwargs = {}
         else:
             modpath, name = tokens
             kwtokens = name.split(':', 1)
             if len(kwtokens) == 1:
                 # no '(' found
-                kwargs = dict()
+                kwargs = {}
             else:
                 name = kwtokens[0]
-                kwtext = 'dict(' + kwtokens[1] + ')'
+                kwtext = f'dict({kwtokens[1]})'
                 kwargs = eval(kwtext)
 
         if modpath:
@@ -352,7 +357,7 @@ def getobjects(iterable, clsbase, modbase, issignal=False):
 
             if not mod:
                 print('')
-                print('Failed to load module %s:' % modpath, e)
+                print(f'Failed to load module {modpath}:', e)
                 sys.exit(1)
         else:
             mod = modbase
@@ -360,7 +365,7 @@ def getobjects(iterable, clsbase, modbase, issignal=False):
         loaded = getmodclasses(mod=mod, clstype=clsbase, clsname=name)
 
         if not loaded:
-            print('No class %s / module %s' % (str(name), modpath))
+            print(f'No class {str(name)} / module {modpath}')
             sys.exit(1)
 
         if issignal:
@@ -371,7 +376,7 @@ def getobjects(iterable, clsbase, modbase, issignal=False):
     return retobjects
 
 def getfunctions(iterable, modbase):
-    retfunctions = list()
+    retfunctions = []
 
     for item in iterable or []:
         tokens = item.split(':', 1)
@@ -379,16 +384,16 @@ def getfunctions(iterable, modbase):
         if len(tokens) == 1:
             modpath = tokens[0]
             name = ''
-            kwargs = dict()
+            kwargs = {}
         else:
             modpath, name = tokens
             kwtokens = name.split(':', 1)
             if len(kwtokens) == 1:
                 # no '(' found
-                kwargs = dict()
+                kwargs = {}
             else:
                 name = kwtokens[0]
-                kwtext = 'dict(' + kwtokens[1] + ')'
+                kwtext = f'dict({kwtokens[1]})'
                 kwargs = eval(kwtext)
 
         if modpath:
@@ -396,7 +401,7 @@ def getfunctions(iterable, modbase):
 
             if not mod:
                 print('')
-                print('Failed to load module %s:' % modpath, e)
+                print(f'Failed to load module {modpath}:', e)
                 sys.exit(1)
         else:
             mod = modbase
@@ -404,7 +409,7 @@ def getfunctions(iterable, modbase):
         loaded = getmodfunctions(mod=mod, funcname=name)
 
         if not loaded:
-            print('No function %s / module %s' % (str(name), modpath))
+            print(f'No function {str(name)} / module {modpath}')
             sys.exit(1)
 
         retfunctions.append((loaded[0], kwargs))
@@ -733,10 +738,7 @@ def parse_args(pargs=''):
               '  --plot style="candle" (to plot candlesticks)\n')
     )
 
-    if pargs:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs else parser.parse_args()
 
 
 if __name__ == '__main__':

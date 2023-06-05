@@ -70,7 +70,7 @@ class SmaCross(bt.SignalStrategy):
 
     def notify_trade(self, trade):
         if trade.isclosed:
-            print('profit {}'.format(trade.pnlcomm))
+            print(f'profit {trade.pnlcomm}')
 
     def __init__(self):
         print('Creating Signal Strategy')
@@ -93,11 +93,10 @@ class St(bt.Strategy):
 
     def notify_trade(self, trade):
         if trade.isclosed:
-            print('profit {}'.format(trade.pnlcomm))
+            print(f'profit {trade.pnlcomm}')
 
     def __init__(self):
         print('Creating Empty Strategy')
-        pass
 
     def next(self):
         pass
@@ -109,7 +108,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -122,16 +121,16 @@ def runstrat(args=None):
     cerebro.adddata(data0)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
     if not args.order_history:
-        cerebro.addstrategy(SmaCross, **eval('dict(' + args.strat + ')'))
+        cerebro.addstrategy(SmaCross, **eval(f'dict({args.strat})'))
     else:
-        cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+        cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
         cerebro.add_order_history(ORDER_HISTORY, notify=True)
 
     cerebro.addanalyzer(bt.analyzers.TimeReturn, timeframe=bt.TimeFrame.Months)
@@ -139,10 +138,10 @@ def runstrat(args=None):
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

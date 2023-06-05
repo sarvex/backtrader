@@ -35,13 +35,13 @@ from backtrader.stores import vcstore
 
 
 class MetaVCData(DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaVCData, cls).__init__(name, bases, dct)
+        super(MetaVCData, self).__init__(name, bases, dct)
 
         # Register with the store
-        vcstore.VCStore.DataCls = cls
+        vcstore.VCStore.DataCls = self
 
 
 class VCData(with_metaclass(MetaVCData, DataBase)):
@@ -227,14 +227,13 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
             if isinstance(tzs, tzinfo):
                 return bt.utils.date.Localizer(tzs)
 
-        if tzs:
-            try:
-                tz = pytz.timezone(tzs)
-            except pytz.UnknownTimeZoneError:
-                return None  # nothing can be done
-        else:
+        if not tzs:
             return None
 
+        try:
+            tz = pytz.timezone(tzs)
+        except pytz.UnknownTimeZoneError:
+            return None  # nothing can be done
         # contractdetails there, import ok, timezone found, return it
         return tz
 
@@ -249,16 +248,16 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
         # Correct a copy past directly from VisualChart
         dataname = self.p.dataname
         if dataname[3].isspace():
-            dataname = dataname[0:2] + dataname[4:]
+            dataname = dataname[:2] + dataname[4:]
             self.p.dataname = dataname
 
-        self._dataname = '010' + self.p.dataname
-        self._mktcode = self.p.dataname[0:3]
+        self._dataname = f'010{self.p.dataname}'
+        self._mktcode = self.p.dataname[:3]
 
         self._tradename = tradename = self.p.tradename or self._dataname
         # Correct a copy past directly from VisualChart
         if tradename[3].isspace():
-            tradename = tradename[0:2] + tradename[4:]
+            tradename = tradename[:2] + tradename[4:]
             self._tradename = tradename
 
     def setenvironment(self, env):
@@ -440,10 +439,7 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
         delivered. The bar may be stalled because vc awaits a new tick and
         during low negotiation hour this can take several seconds after the
         actual expected delivery time'''
-        if self._ticking:
-            return -1  # no timeout
-
-        return self._pingtmout
+        return -1 if self._ticking else self._pingtmout
 
     def OnNewDataSerieBar(self, DataSerie, forcepush=False):
         # Processes the COM Event (also called directly when 1st creating the
@@ -496,7 +492,7 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
         dtnow = datetime.now() - self._TOFFSET
         # CHECK: there should be a maximum of 1 bar when pinging
         # In any case the algorithm doesn't hurt
-        for idx in range(self.idx, ssize + 1):  # reach ssize
+        for _ in range(self.idx, ssize + 1):
             bar = self._serie.GetBarValues(self.idx)
             # dt = (self.NULLDATE + timedelta(days=bar.Date) + self._mktoff1)
             dt = self.NULLDATE + timedelta(days=bar.Date) - self._mktoffdiff
@@ -543,11 +539,7 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
         # After this the reception of ticks is cancelled
 
         aticks = ArrayTicks[0]
-        # self.debug_ticks(aticks)
-        ticks = dict()
-        for tick in aticks:
-            ticks[tick.Field] = tick
-
+        ticks = {tick.Field: tick for tick in aticks}
         if self.store.vcrtmod.Field_Description in ticks:
             if self._newticks:
                 self._newticks = False
@@ -583,7 +575,7 @@ class VCData(with_metaclass(MetaVCData, DataBase)):
             print('-' * 40)
             print('tick.SymbolCode', tick.SymbolCode.encode('ascii', 'ignore'))
             fname = self.store.vcrtfields.get(tick.Field, tick.Field)
-            print('  tick.Field   : {} ({})'.format(fname, tick.Field))
+            print(f'  tick.Field   : {fname} ({tick.Field})')
             print('  tick.FieldEx :', tick.FieldEx)
             tdate = tick.Date
             if tdate:

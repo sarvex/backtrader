@@ -45,7 +45,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -56,8 +56,8 @@ def runstrat(args=None):
 
     data0 = bt.feeds.BacktraderCSVData(dataname=args.data0, **kwargs)
 
-    fkwargs = dict()
-    fkwargs.update(**eval('dict(' + args.renko + ')'))
+    fkwargs = {}
+    fkwargs.update(**eval(f'dict({args.renko})'))
 
     if not args.dual:
         data0.addfilter(bt.filters.Renko, **fkwargs)
@@ -69,22 +69,22 @@ def runstrat(args=None):
         cerebro.adddata(data1)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
     kwargs = dict(stdstats=False)
-    kwargs.update(**eval('dict(' + args.cerebro + ')'))
+    kwargs.update(**eval(f'dict({args.cerebro})'))
     cerebro.run(**kwargs)
 
     if args.plot:  # Plot if requested to
         kwargs = dict(style='candle')
-        kwargs.update(**eval('dict(' + args.plot + ')'))
+        kwargs.update(**eval(f'dict({args.plot})'))
         cerebro.plot(**kwargs)
 
 

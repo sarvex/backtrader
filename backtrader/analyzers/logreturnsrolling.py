@@ -110,11 +110,10 @@ class LogReturnsRolling(bt.TimeFrameAnalyzerBase):
                                          maxlen=self.compression)
 
         if self.p.data is None:
-            # keep the initial portfolio value if not tracing a data
-            if not self._fundmode:
-                self._lastvalue = self.strategy.broker.getvalue()
-            else:
+            if self._fundmode:
                 self._lastvalue = self.strategy.broker.fundvalue
+            else:
+                self._lastvalue = self.strategy.broker.getvalue()
 
     def notify_fund(self, cash, value, fundvalue, shares):
         if not self._fundmode:

@@ -46,9 +46,9 @@ class TestStrategy(bt.Strategy):
         if not nodate:
             dt = dt or self.data.datetime[0]
             dt = bt.num2date(dt)
-            print('%s, %s' % (dt.isoformat(), txt))
+            print(f'{dt.isoformat()}, {txt}')
         else:
-            print('---------- %s' % (txt))
+            print(f'---------- {txt}')
 
     def notify_order(self, order):
         if order.status in [bt.Order.Submitted, bt.Order.Accepted]:
@@ -71,7 +71,7 @@ class TestStrategy(bt.Strategy):
 
         elif order.status in [order.Expired, order.Canceled, order.Margin]:
             if self.p.printops:
-                self.log('%s ,' % order.Status[order.status])
+                self.log(f'{order.Status[order.status]} ,')
 
         # Allow new orders
         self.orderid = None
@@ -94,20 +94,18 @@ class TestStrategy(bt.Strategy):
 
         self.tstart = time_clock()
 
-        self.buycreate = list()
-        self.sellcreate = list()
-        self.buyexec = list()
-        self.sellexec = list()
+        self.buycreate = []
+        self.sellcreate = []
+        self.buyexec = []
+        self.sellexec = []
 
     def stop(self):
         tused = time_clock() - self.tstart
         if self.p.printdata:
-            self.log('Time used: %s' % str(tused))
+            self.log(f'Time used: {str(tused)}')
             self.log('Final portfolio value: %.2f' % self.broker.getvalue())
             self.log('Final cash value: %.2f' % self.broker.getcash())
             self.log('-------------------------')
-        else:
-            pass
 
     def next(self):
         if self.p.printdata:
@@ -162,14 +160,10 @@ def test_run(main=False):
         analysis = analyzer.get_analysis()
         if main:
             print(analysis)
-            print(str(analysis[next(iter(analysis.keys()))]))
+            print(analysis[next(iter(analysis.keys()))])
         else:
             # Handle different precision
-            if PY2:
-                sval = '0.2795'
-            else:
-                sval = '0.2794999999999983'
-
+            sval = '0.2795' if PY2 else '0.2794999999999983'
             assert str(analysis[next(iter(analysis.keys()))]) == sval
 
 

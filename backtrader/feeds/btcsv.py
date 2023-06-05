@@ -40,11 +40,11 @@ class BacktraderCSVData(feed.CSVDataBase):
         itoken = iter(linetokens)
 
         dttxt = next(itoken)  # Format is YYYY-MM-DD - skip char 4 and 7
-        dt = date(int(dttxt[0:4]), int(dttxt[5:7]), int(dttxt[8:10]))
+        dt = date(int(dttxt[:4]), int(dttxt[5:7]), int(dttxt[8:10]))
 
         if len(linetokens) == 8:
             tmtxt = next(itoken)  # Format if present HH:MM:SS, skip 3 and 6
-            tm = time(int(tmtxt[0:2]), int(tmtxt[3:5]), int(tmtxt[6:8]))
+            tm = time(int(tmtxt[:2]), int(tmtxt[3:5]), int(tmtxt[6:8]))
         else:
             tm = self.p.sessionend  # end of the session parameter
 

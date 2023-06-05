@@ -102,7 +102,7 @@ class TradeAnalyzer(Analyzer):
 
                 ls = trades.streak[wlname].longest or 0
                 trades.streak[wlname].longest = \
-                    max(ls, trades.streak[wlname].current)
+                        max(ls, trades.streak[wlname].current)
 
             trpnl = trades.pnl
             trpnl.gross.total += trade.pnl
@@ -130,7 +130,7 @@ class TradeAnalyzer(Analyzer):
             # Long/Short statistics
             for tname in ['long', 'short']:
                 trls = trades[tname]
-                ls = res['t' + tname]
+                ls = res[f't{tname}']
 
                 trls.total += ls  # long.total / short.total
                 trls.pnl.total += trade.pnlcomm * ls
@@ -144,7 +144,7 @@ class TradeAnalyzer(Analyzer):
 
                     trls.pnl[wlname].total += pnlcomm
                     trls.pnl[wlname].average = \
-                        trls.pnl[wlname].total / (trls[wlname] or 1.0)
+                            trls.pnl[wlname].total / (trls[wlname] or 1.0)
 
                     wm = trls.pnl[wlname].max or 0.0
                     func = max if wlname == 'won' else min
@@ -176,7 +176,7 @@ class TradeAnalyzer(Analyzer):
             # Length Long/Short
             for lsname in ['long', 'short']:
                 trls = trades.len[lsname]  # trades.len.long
-                ls = res['t' + lsname]  # tlong/tshort
+                ls = res[f't{lsname}']
 
                 barlen = trade.barlen * ls
 
@@ -199,7 +199,7 @@ class TradeAnalyzer(Analyzer):
                     trls_wl.total += barlen2  # trades.len.long.won.total
 
                     trls_wl.average = \
-                        trls_wl.total / (trades[lsname][wlname] or 1.0)
+                            trls_wl.total / (trades[lsname][wlname] or 1.0)
 
                     # max/min
                     m = trls_wl.max or 0

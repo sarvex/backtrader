@@ -30,13 +30,13 @@ from backtrader import date2num  # avoid dict lookups
 
 
 class MetaVChartFile(bt.DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaVChartFile, cls).__init__(name, bases, dct)
+        super(MetaVChartFile, self).__init__(name, bases, dct)
 
         # Register with the store
-        bt.stores.VChartFile.DataCls = cls
+        bt.stores.VChartFile.DataCls = self
 
 
 class VChartFile(bt.with_metaclass(MetaVChartFile, bt.DataBase)):
@@ -79,7 +79,7 @@ class VChartFile(bt.with_metaclass(MetaVChartFile, bt.DataBase)):
         # Example: 01 + 0 + 015ES + .fd -> 010015ES.fd
         dataname = '01' + '0' + self.p.dataname + ext
         # 015ES -> 0 + 015 -> 0015
-        mktcode = '0' + self.p.dataname[0:3]
+        mktcode = f'0{self.p.dataname[:3]}'
 
         # basepath/0015/010015ES.fd
         path = os.path.join(basepath, mktcode, dataname)

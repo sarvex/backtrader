@@ -47,9 +47,9 @@ class TestStrategy(bt.Strategy):
         if not nodate:
             dt = dt or self.data.datetime[0]
             dt = bt.num2date(dt)
-            print('%s, %s' % (dt.isoformat(), txt))
+            print(f'{dt.isoformat()}, {txt}')
         else:
-            print('---------- %s' % (txt))
+            print(f'---------- {txt}')
 
     def notify_trade(self, trade):
         if trade.isclosed:
@@ -76,7 +76,7 @@ class TestStrategy(bt.Strategy):
 
         elif order.status in [order.Expired, order.Canceled, order.Margin]:
             if self.p.printops:
-                self.log('%s ,' % order.Status[order.status])
+                self.log(f'{order.Status[order.status]} ,')
 
         # Allow new orders
         self.orderid = None
@@ -99,21 +99,19 @@ class TestStrategy(bt.Strategy):
 
         self.tstart = time_clock()
 
-        self.buycreate = list()
-        self.sellcreate = list()
-        self.buyexec = list()
-        self.sellexec = list()
+        self.buycreate = []
+        self.sellcreate = []
+        self.buyexec = []
+        self.sellexec = []
         self.tradecount = 0
 
     def stop(self):
         tused = time_clock() - self.tstart
         if self.p.printdata:
-            self.log('Time used: %s' % str(tused))
+            self.log(f'Time used: {str(tused)}')
             self.log('Final portfolio value: %.2f' % self.broker.getvalue())
             self.log('Final cash value: %.2f' % self.broker.getcash())
             self.log('-------------------------')
-        else:
-            pass
 
     def next(self):
         if self.p.printdata:
@@ -170,15 +168,14 @@ def test_run(main=False):
             analysis = analyzer.get_analysis()
             if main:
                 print(analysis)
-                print(str(analysis.sqn))
+                print(analysis.sqn)
+            elif maxtrades in [0, 1]:
+                assert analysis.sqn == 0
+                assert analysis.trades == maxtrades
             else:
-                if maxtrades == 0 or maxtrades == 1:
-                    assert analysis.sqn == 0
-                    assert analysis.trades == maxtrades
-                else:
                     # Handle different precision
-                    assert str(analysis.sqn)[0:14] == '0.912550316439'
-                    assert str(analysis.trades) == '11'
+                assert str(analysis.sqn).startswith('0.912550316439')
+                assert str(analysis.trades) == '11'
 
 
 if __name__ == '__main__':

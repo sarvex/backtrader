@@ -51,30 +51,33 @@ class St(bt.SignalStrategy):
     def start(self):
         super(self.__class__, self).start()
         if self.p.printdata:
-            txtfields = list()
-            txtfields.append('Len')
-            txtfields.append('Datetime')
-            txtfields.append('Open')
-            txtfields.append('High')
-            txtfields.append('Low')
-            txtfields.append('Close')
-            txtfields.append('Volume')
-            txtfields.append('OpenInterest')
+            txtfields = [
+                'Len',
+                'Datetime',
+                'Open',
+                'High',
+                'Low',
+                'Close',
+                'Volume',
+                'OpenInterest',
+            ]
             print(','.join(txtfields))
 
     def next(self):
         super(self.__class__, self).next()
         if self.p.printdata:
             # Print only 1st data ... is just a check that things are running
-            txtfields = list()
-            txtfields.append('%04d' % len(self))
-            txtfields.append(self.data.datetime.datetime(0).isoformat())
-            txtfields.append('%.2f' % self.data0.open[0])
-            txtfields.append('%.2f' % self.data0.high[0])
-            txtfields.append('%.2f' % self.data0.low[0])
-            txtfields.append('%.2f' % self.data0.close[0])
-            txtfields.append('%.2f' % self.data0.volume[0])
-            txtfields.append('%.2f' % self.data0.openinterest[0])
+            txtfields = ['%04d' % len(self), self.data.datetime.datetime(0).isoformat()]
+            txtfields.extend(
+                (
+                    '%.2f' % self.data0.open[0],
+                    '%.2f' % self.data0.high[0],
+                    '%.2f' % self.data0.low[0],
+                    '%.2f' % self.data0.close[0],
+                    '%.2f' % self.data0.volume[0],
+                    '%.2f' % self.data0.openinterest[0],
+                )
+            )
             print(','.join(txtfields))
 
 
@@ -97,7 +100,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
     cerebro.broker.set_cash(args.cash)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -139,17 +142,17 @@ def runstrat(args=None):
     al = strat.analyzers.timereturn
     print('-- Time Return:')
     for k, v in al.get_analysis().items():
-        print('{}: {}'.format(k, v))
+        print(f'{k}: {v}')
 
     al = strat.analyzers.sharperatio
     print('-- Sharpe Ratio:')
     for k, v in al.get_analysis().items():
-        print('{}: {}'.format(k, v))
+        print(f'{k}: {v}')
 
     al = strat.analyzers.sqn
     print('-- SQN:')
     for k, v in al.get_analysis().items():
-        print('{}: {}'.format(k, v))
+        print(f'{k}: {v}')
 
     if args.pyfolio:
         pyfoliozer = strat.analyzers.getbyname('pyfolio',)
@@ -165,19 +168,18 @@ def runstrat(args=None):
             print('-- GROSS LEVERAGE')
             print(gross_lev)
 
-        if True:
-            import pyfolio as pf
-            pf.create_full_tear_sheet(
-                returns,
-                positions=positions,
-                transactions=transactions,
-                gross_lev=gross_lev,
-                round_trips=True)
+        import pyfolio as pf
+        pf.create_full_tear_sheet(
+            returns,
+            positions=positions,
+            transactions=transactions,
+            gross_lev=gross_lev,
+            round_trips=True)
 
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            pkwargs = eval('dict(' + args.plot + ')')  # args were passed
+            pkwargs = eval(f'dict({args.plot})')
 
         cerebro.plot(**pkwargs)
 
@@ -240,10 +242,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

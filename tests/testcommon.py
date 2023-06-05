@@ -50,12 +50,7 @@ TODATE = datetime.datetime(2006, 12, 31)
 def getdata(index, fromdate=FROMDATE, todate=TODATE):
 
     datapath = os.path.join(modpath, dataspath, datafiles[index])
-    data = DATAFEED(
-        dataname=datapath,
-        fromdate=fromdate,
-        todate=todate)
-
-    return data
+    return DATAFEED(dataname=datapath, fromdate=fromdate, todate=todate)
 
 
 def runtest(datas,
@@ -74,7 +69,7 @@ def runtest(datas,
     preloads = [True, False] if preload is None else [preload]
     exbars = [-2, -1, False] if exbar is None else [exbar]
 
-    cerebros = list()
+    cerebros = []
     for prload in preloads:
         for ronce in runonces:
             for exbar in exbars:
@@ -84,8 +79,7 @@ def runtest(datas,
                                      exactbars=exbar)
 
                 if kwargs.get('main', False):
-                    print('prload {} / ronce {} exbar {}'.format(
-                        prload, ronce, exbar))
+                    print(f'prload {prload} / ronce {ronce} exbar {exbar}')
 
                 if isinstance(datas, bt.LineSeries):
                     datas = [datas]
@@ -187,11 +181,11 @@ class TestStrategy(bt.Strategy):
                 print('chkpt %d -> %s' % (chkpt, dtstr))
 
             for lidx in range(self.ind.size()):
-                chkvals = list()
+                chkvals = []
                 outtxt = '    ['
                 for chkpt in chkpts:
                     valtxt = "'%f'" % self.ind.lines[lidx][chkpt]
-                    outtxt += "'%s'," % valtxt
+                    outtxt += f"'{valtxt}',"
                     chkvals.append(valtxt)
 
                     outtxt = '    [' + ', '.join(chkvals) + '],'
