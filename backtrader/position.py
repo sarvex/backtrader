@@ -39,15 +39,16 @@ class Position(object):
     '''
 
     def __str__(self):
-        items = list()
-        items.append('--- Position Begin')
-        items.append('- Size: {}'.format(self.size))
-        items.append('- Price: {}'.format(self.price))
-        items.append('- Price orig: {}'.format(self.price_orig))
-        items.append('- Closed: {}'.format(self.upclosed))
-        items.append('- Opened: {}'.format(self.upopened))
-        items.append('- Adjbase: {}'.format(self.adjbase))
-        items.append('--- Position End')
+        items = [
+            '--- Position Begin',
+            f'- Size: {self.size}',
+            f'- Price: {self.price}',
+            f'- Price orig: {self.price_orig}',
+            f'- Closed: {self.upclosed}',
+            f'- Opened: {self.upopened}',
+            f'- Adjbase: {self.adjbase}',
+            '--- Position End',
+        ]
         return '\n'.join(items)
 
     def __init__(self, size=0, price=0.0):
@@ -72,27 +73,28 @@ class Position(object):
         return self.size == oldsize
 
     def set(self, size, price):
-        if self.size > 0:
-            if size > self.size:
-                self.upopened = size - self.size  # new 10 - old 5 -> 5
-                self.upclosed = 0
-            else:
-                # same side min(0, 3) -> 0 / reversal min(0, -3) -> -3
-                self.upopened = min(0, size)
-                # same side min(10, 10 - 5) -> 5
-                # reversal min(10, 10 - -5) -> min(10, 15) -> 10
-                self.upclosed = min(self.size, self.size - size)
+        if (
+            self.size > 0
+            and size > self.size
+            or self.size <= 0
+            and self.size < 0
+            and size < self.size
+        ):
+            self.upopened = size - self.size  # new 10 - old 5 -> 5
+            self.upclosed = 0
+        elif self.size > 0:
+            # same side min(0, 3) -> 0 / reversal min(0, -3) -> -3
+            self.upopened = min(0, size)
+            # same side min(10, 10 - 5) -> 5
+            # reversal min(10, 10 - -5) -> min(10, 15) -> 10
+            self.upclosed = min(self.size, self.size - size)
 
         elif self.size < 0:
-            if size < self.size:
-                self.upopened = size - self.size  # ex: -5 - -3 -> -2
-                self.upclosed = 0
-            else:
-                # same side max(0, -5) -> 0 / reversal max(0, 5) -> 5
-                self.upopened = max(0, size)
-                # same side max(-10, -10 - -5) -> max(-10, -5) -> -5
-                # reversal max(-10, -10 - 5) -> max(-10, -15) -> -10
-                self.upclosed = max(self.size, self.size - size)
+            # same side max(0, -5) -> 0 / reversal max(0, 5) -> 5
+            self.upopened = max(0, size)
+            # same side max(-10, -10 - -5) -> max(-10, -5) -> -5
+            # reversal max(-10, -10 - 5) -> max(-10, -15) -> -10
+            self.upclosed = max(self.size, self.size - size)
 
         else:  # self.size == 0
             self.upopened = self.size
@@ -100,18 +102,14 @@ class Position(object):
 
         self.size = size
         self.price_orig = self.price
-        if size:
-            self.price = price
-        else:
-            self.price = 0.0
-
+        self.price = price if size else 0.0
         return self.size, self.price, self.upopened, self.upclosed
 
     def __len__(self):
         return abs(self.size)
 
     def __bool__(self):
-        return bool(self.size != 0)
+        return self.size != 0
 
     __nonzero__ = __bool__
 
@@ -186,19 +184,17 @@ class Position(object):
                 opened, closed = self.size, -oldsize
                 self.price = price
 
-        else:  # oldsize < 0 - existing short position updated
+        elif size < 0:  # increased position
+            opened, closed = size, 0
+            self.price = (self.price * oldsize + size * price) / self.size
 
-            if size < 0:  # increased position
-                opened, closed = size, 0
-                self.price = (self.price * oldsize + size * price) / self.size
+        elif self.size < 0:  # reduced position
+            opened, closed = 0, size
+            # self.price = self.price
 
-            elif self.size < 0:  # reduced position
-                opened, closed = 0, size
-                # self.price = self.price
-
-            else:  # self.size > 0 - reversed position from minus to plus
-                opened, closed = self.size, -oldsize
-                self.price = price
+        else:  # self.size > 0 - reversed position from minus to plus
+            opened, closed = self.size, -oldsize
+            self.price = price
 
         self.upopened = opened
         self.upclosed = closed

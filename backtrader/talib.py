@@ -68,20 +68,16 @@ else:
 
         _KNOWN_UNSTABLE = ['SAR']
 
-        def dopostinit(cls, _obj, *args, **kwargs):
+        def dopostinit(self, _obj, *args, **kwargs):
             # Go to parent
-            res = super(_MetaTALibIndicator, cls).dopostinit(_obj,
-                                                             *args, **kwargs)
+            res = super(_MetaTALibIndicator, self).dopostinit(_obj, *args, **kwargs)
             _obj, args, kwargs = res
 
             # Get the minimum period by using the abstract interface and params
             _obj._tabstract.set_function_args(**_obj.p._getkwargs())
             _obj._lookback = lookback = _obj._tabstract.lookback + 1
             _obj.updateminperiod(lookback)
-            if _obj._unstable:
-                _obj._lookback = 0
-
-            elif cls.__name__ in cls._KNOWN_UNSTABLE:
+            if _obj._unstable or self.__name__ in self._KNOWN_UNSTABLE:
                 _obj._lookback = 0
 
             cerebro = bt.metabase.findowner(_obj, bt.Cerebro)
@@ -106,7 +102,7 @@ else:
             unstable = False
 
             # Prepare plotinfo
-            plotinfo = dict()
+            plotinfo = {}
             fflags = _tabstract.function_flags or []
             for fflag in fflags:
                 rfflag = R_TA_FUNC_FLAGS[fflag]
@@ -122,11 +118,11 @@ else:
             # Prepare plotlines
             lines = _tabstract.output_names
             output_flags = _tabstract.output_flags
-            plotlines = dict()
+            plotlines = {}
             samecolor = False
             for lname in lines:
                 oflags = output_flags.get(lname, None)
-                pline = dict()
+                pline = {}
                 for oflag in oflags or []:
                     orflag = R_TA_OUTPUT_FLAGS[oflag]
                     if orflag & OUT_FLAGS_LINE:
@@ -159,8 +155,7 @@ else:
                 # indicator is a candle. The values of a candle (100) will be
                 # used to plot a sign above the maximum of the bar which
                 # produces the candle
-                pline = dict()
-                pline['_name'] = name  # plotted name
+                pline = {'_name': name}
                 lname = '_candleplot'  # change name
                 lines.append(lname)
                 pline['ls'] = ''
@@ -198,16 +193,16 @@ else:
             fsize = self.size()
             lsize = fsize - self._iscandle
             if lsize == 1:  # only 1 output, no tuple returned
-                self.lines[0].array = array.array(str('d'), output)
+                self.lines[0].array = array.array('d', output)
 
                 if fsize > lsize:  # candle is present
                     candleref = narrays[self.CANDLEREF] * self.CANDLEOVER
                     output2 = candleref * (output / 100.0)
-                    self.lines[1].array = array.array(str('d'), output2)
+                    self.lines[1].array = array.array('d', output2)
 
             else:
                 for i, o in enumerate(output):
-                    self.lines[i].array = array.array(str('d'), o)
+                    self.lines[i].array = array.array('d', o)
 
         def next(self):
             # prepare the data arrays - single shot

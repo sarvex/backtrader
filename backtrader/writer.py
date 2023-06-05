@@ -107,8 +107,8 @@ class WriterFile(WriterBase):
 
     def __init__(self):
         self._len = itertools.count(1)
-        self.headers = list()
-        self.values = list()
+        self.headers = []
+        self.values = []
 
     def _start_output(self):
         # open file if needed
@@ -137,7 +137,7 @@ class WriterFile(WriterBase):
     def next(self):
         if self.p.csv:
             self.writeiterable(self.values, func=str, counter=next(self._len))
-            self.values = list()
+            self.values = []
 
     def addheaders(self, headers):
         if self.p.csv:
@@ -184,7 +184,7 @@ class WriterFile(WriterBase):
             if recurse:
                 kline += '- '
 
-            kline += str(key) + ':'
+            kline += f'{str(key)}:'
 
             try:
                 sclass = issubclass(val, bt.LineSeries)
@@ -192,18 +192,18 @@ class WriterFile(WriterBase):
                 sclass = False
 
             if sclass:
-                kline += ' ' + val.__name__
+                kline += f' {val.__name__}'
                 self.writeline(kline)
             elif isinstance(val, string_types):
-                kline += ' ' + val
+                kline += f' {val}'
                 self.writeline(kline)
             elif isinstance(val, integer_types):
-                kline += ' ' + str(val)
+                kline += f' {str(val)}'
                 self.writeline(kline)
             elif isinstance(val, float):
                 if self.p.rounding is not None:
                     val = round(val, self.p.rounding)
-                kline += ' ' + str(val)
+                kline += f' {str(val)}'
                 self.writeline(kline)
             elif isinstance(val, dict):
                 if recurse:
@@ -212,9 +212,9 @@ class WriterFile(WriterBase):
                 self.writedict(val, level=level + 1, recurse=True)
             elif isinstance(val, (list, tuple, collectionsAbc.Iterable)):  # Для разных версий Python будут вызываться разные функции
                 line = ', '.join(map(str, val))
-                self.writeline(kline + ' ' + line)
+                self.writeline(f'{kline} {line}')
             else:
-                kline += ' ' + str(val)
+                kline += f' {str(val)}'
                 self.writeline(kline)
 
 

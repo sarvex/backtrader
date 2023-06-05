@@ -29,15 +29,15 @@ from backtrader.utils.py3 import range
 
 
 class MetaChainer(bt.DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaChainer, cls).__init__(name, bases, dct)
+        super(MetaChainer, self).__init__(name, bases, dct)
 
-    def donew(cls, *args, **kwargs):
+    def donew(self, *args, **kwargs):
         '''Intercept const. to copy timeframe/compression from 1st data'''
         # Create the object and set the params in place
-        _obj, args, kwargs = super(MetaChainer, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MetaChainer, self).donew(*args, **kwargs)
 
         if args:
             _obj.p.timeframe = args[0]._timeframe

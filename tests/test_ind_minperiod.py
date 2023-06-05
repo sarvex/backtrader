@@ -31,7 +31,7 @@ chkvals = []
 
 chkmin = 34  # from MACD
 chkind = [btind.SMA, btind.Stochastic, btind.MACD, btind.Highest]
-chkargs = dict()
+chkargs = {}
 
 
 def test_run(main=False):

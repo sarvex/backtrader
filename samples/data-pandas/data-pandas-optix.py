@@ -29,17 +29,14 @@ import backtrader.feeds as btfeeds
 import pandas
 
 
+
+
 class PandasDataOptix(btfeeds.PandasData):
 
     lines = ('optix_close', 'optix_pess', 'optix_opt',)
     params = (('optix_close', -1),
               ('optix_pess', -1),
               ('optix_opt', -1))
-
-    if False:
-        # No longer needed with version 1.9.62.122
-        datafields = btfeeds.PandasData.datafields + (
-            ['optix_close', 'optix_pess', 'optix_opt'])
 
 
 class StrategyOptix(bt.Strategy):

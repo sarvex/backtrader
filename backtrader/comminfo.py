@@ -206,10 +206,7 @@ class CommInfoBase(with_metaclass(MetaParams)):
     def getvaluesize(self, size, price):
         '''Returns the value of size for given a price. For future-like
         objects it is fixed at size * margin'''
-        if not self._stocklike:
-            return abs(size) * self.get_margin(price)
-
-        return size * price
+        return size * price if self._stocklike else abs(size) * self.get_margin(price)
 
     def getvalue(self, position, price):
         '''Returns the value of a position given a price. For future-like
@@ -250,10 +247,7 @@ class CommInfoBase(with_metaclass(MetaParams)):
 
     def cashadjust(self, size, price, newprice):
         '''Calculates cash adjustment for a given price difference'''
-        if not self._stocklike:
-            return size * (newprice - price) * self.p.mult
-
-        return 0.0
+        return size * (newprice - price) * self.p.mult if not self._stocklike else 0.0
 
     def get_credit_interest(self, data, pos, dt):
         '''Calculates the credit due for short selling or product specific'''

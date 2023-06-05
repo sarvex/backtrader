@@ -119,7 +119,7 @@ def runstrat(args=None):
 
     cerebro = bt.Cerebro()
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -137,8 +137,8 @@ def runstrat(args=None):
     if args.plot:
         pkwargs = dict(style='candle')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -182,10 +182,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

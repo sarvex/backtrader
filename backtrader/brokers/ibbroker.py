@@ -52,15 +52,14 @@ class IBOrderState(object):
 
     def __init__(self, orderstate):
         for f in self._fields:
-            fname = 'm_' + f
+            fname = f'm_{f}'
             setattr(self, fname, getattr(orderstate, fname))
 
     def __str__(self):
-        txt = list()
-        txt.append('--- ORDERSTATE BEGIN')
+        txt = ['--- ORDERSTATE BEGIN']
         for f in self._fields:
-            fname = 'm_' + f
-            txt.append('{}: {}'.format(f.capitalize(), getattr(self, fname)))
+            fname = f'm_{f}'
+            txt.append(f'{f.capitalize()}: {getattr(self, fname)}')
         txt.append('--- ORDERSTATE END')
         return '\n'.join(txt)
 
@@ -94,16 +93,18 @@ class IBOrder(OrderBase, ib.ext.Order.Order):
         '''Get the printout from the base class and add some ib.Order specific
         fields'''
         basetxt = super(IBOrder, self).__str__()
-        tojoin = [basetxt]
-        tojoin.append('Ref: {}'.format(self.ref))
-        tojoin.append('orderId: {}'.format(self.m_orderId))
-        tojoin.append('Action: {}'.format(self.m_action))
-        tojoin.append('Size (ib): {}'.format(self.m_totalQuantity))
-        tojoin.append('Lmt Price: {}'.format(self.m_lmtPrice))
-        tojoin.append('Aux Price: {}'.format(self.m_auxPrice))
-        tojoin.append('OrderType: {}'.format(self.m_orderType))
-        tojoin.append('Tif (Time in Force): {}'.format(self.m_tif))
-        tojoin.append('GoodTillDate: {}'.format(self.m_goodTillDate))
+        tojoin = [
+            basetxt,
+            f'Ref: {self.ref}',
+            f'orderId: {self.m_orderId}',
+            f'Action: {self.m_action}',
+            f'Size (ib): {self.m_totalQuantity}',
+            f'Lmt Price: {self.m_lmtPrice}',
+            f'Aux Price: {self.m_auxPrice}',
+            f'OrderType: {self.m_orderType}',
+            f'Tif (Time in Force): {self.m_tif}',
+            f'GoodTillDate: {self.m_goodTillDate}',
+        ]
         return '\n'.join(tojoin)
 
     # Map backtrader order types to the ib specifics
@@ -230,11 +231,11 @@ class IBCommInfo(CommInfoBase):
 
 
 class MetaIBBroker(BrokerBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaIBBroker, cls).__init__(name, bases, dct)
-        ibstore.IBStore.BrokerCls = cls
+        super(MetaIBBroker, self).__init__(name, bases, dct)
+        ibstore.IBStore.BrokerCls = self
 
 
 class IBBroker(with_metaclass(MetaIBBroker, BrokerBase)):
@@ -271,8 +272,8 @@ class IBBroker(with_metaclass(MetaIBBroker, BrokerBase)):
         self.startingvalue = self.value = 0.0
 
         self._lock_orders = threading.Lock()  # control access
-        self.orderbyid = dict()  # orders by order id
-        self.executions = dict()  # notified executions
+        self.orderbyid = {}
+        self.executions = {}
         self.ordstatus = collections.defaultdict(dict)
         self.notifs = queue.Queue()  # holds orders which are notified
         self.tonotify = collections.deque()  # hold oids to be notified
@@ -471,8 +472,6 @@ class IBBroker(with_metaclass(MetaIBBroker, BrokerBase)):
             # "filled"
             if msg.filled:
                 self.ordstatus[msg.orderId][msg.filled] = msg
-        else:  # Unknown status ...
-            pass
 
     def push_execution(self, ex):
         self.executions[ex.m_execId] = ex

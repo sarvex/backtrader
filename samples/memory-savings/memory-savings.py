@@ -86,6 +86,7 @@ class St(bt.Strategy):
             tlen += self.rindicator(ind, i, 0)
 
         self.loglendetails('-- Evaluating Observers')
+        logtxt = '---- Observer {} Total Cells {} - Cells per Line {}'
         for i, obs in enumerate(self.getobservers()):
             tobs = 0
             for line in obs.lines:
@@ -93,10 +94,9 @@ class St(bt.Strategy):
                 tline = len(line.array)
 
             tlen += tdata
-            logtxt = '---- Observer {} Total Cells {} - Cells per Line {}'
             self.loglendetails(logtxt.format(i, tobs, tline))
 
-        print('Total memory cells used: {}'.format(tlen))
+        print(f'Total memory cells used: {tlen}')
 
     def rindicator(self, ind, i, deep):
         tind = 0
@@ -106,10 +106,10 @@ class St(bt.Strategy):
 
         thisind = tind
 
-        tsub = 0
-        for j, sind in enumerate(ind.getindicators()):
-            tsub += self.rindicator(sind, j, deep + 1)
-
+        tsub = sum(
+            self.rindicator(sind, j, deep + 1)
+            for j, sind in enumerate(ind.getindicators())
+        )
         iname = ind.__class__.__name__.split('.')[-1]
 
         logtxt = '---- Indicator {}.{} {} Total Cells {} - Cells per line {}'

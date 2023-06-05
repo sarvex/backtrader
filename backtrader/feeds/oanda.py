@@ -32,13 +32,13 @@ from backtrader.stores import oandastore
 
 
 class MetaOandaData(DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaOandaData, cls).__init__(name, bases, dct)
+        super(MetaOandaData, self).__init__(name, bases, dct)
 
         # Register with the store
-        oandastore.OandaStore.DataCls = cls
+        oandastore.OandaStore.DataCls = self
 
 
 class OandaData(with_metaclass(MetaOandaData, DataBase)):
@@ -184,7 +184,7 @@ class OandaData(with_metaclass(MetaOandaData, DataBase)):
 
         # Create attributes as soon as possible
         self._statelivereconn = False  # if reconnecting in live state
-        self._storedmsg = dict()  # keep pending live message (under None)
+        self._storedmsg = {}
         self.qlive = queue.Queue()
         self._state = self._ST_OVER
 
@@ -217,14 +217,8 @@ class OandaData(with_metaclass(MetaOandaData, DataBase)):
     def _st_start(self, instart=True, tmout=None):
         if self.p.historical:
             self.put_notification(self.DELAYED)
-            dtend = None
-            if self.todate < float('inf'):
-                dtend = num2date(self.todate)
-
-            dtbegin = None
-            if self.fromdate > float('-inf'):
-                dtbegin = num2date(self.fromdate)
-
+            dtend = num2date(self.todate) if self.todate < float('inf') else None
+            dtbegin = num2date(self.fromdate) if self.fromdate > float('-inf') else None
             self.qhist = self.o.candles(
                 self.p.dataname, dtbegin, dtend,
                 self._timeframe, self._compression,
@@ -235,11 +229,7 @@ class OandaData(with_metaclass(MetaOandaData, DataBase)):
             return True
 
         self.qlive = self.o.streaming_prices(self.p.dataname, tmout=tmout)
-        if instart:
-            self._statelivereconn = self.p.backfill_start
-        else:
-            self._statelivereconn = self.p.backfill
-
+        self._statelivereconn = self.p.backfill_start if instart else self.p.backfill
         if self._statelivereconn:
             self.put_notification(self.DELAYED)
 
@@ -305,12 +295,11 @@ class OandaData(with_metaclass(MetaOandaData, DataBase)):
 
                 # Process the message according to expected return type
                 if not self._statelivereconn:
-                    if self._laststatus != self.LIVE:
-                        if self.qlive.qsize() <= 1:  # very short live queue
+                    if self.qlive.qsize() <= 1:
+                        if self._laststatus != self.LIVE:  # very short live queue
                             self.put_notification(self.LIVE)
 
-                    ret = self._load_tick(msg)
-                    if ret:
+                    if ret := self._load_tick(msg):
                         return True
 
                     # could not load bar ... go and get new one
@@ -363,13 +352,12 @@ class OandaData(with_metaclass(MetaOandaData, DataBase)):
                     if self._load_history(msg):
                         return True  # loading worked
 
-                    continue  # not loaded ... date may have been seen
-                else:
-                    # End of histdata
-                    if self.p.historical:  # only historical
-                        self.put_notification(self.DISCONNECTED)
-                        self._state = self._ST_OVER
-                        return False  # end of historical
+                    else:
+                        continue  # not loaded ... date may have been seen
+                elif self.p.historical:  # only historical
+                    self.put_notification(self.DISCONNECTED)
+                    self._state = self._ST_OVER
+                    return False  # end of historical
 
                 # Live is also wished - go for it
                 self._state = self._ST_LIVE

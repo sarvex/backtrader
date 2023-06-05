@@ -71,9 +71,7 @@ class DataSeries(LineSeries):
     def getwriterheaders(self):
         headers = [self._name, 'len']
 
-        for lo in self.LineOrder:
-            headers.append(self._getlinealias(lo))
-
+        headers.extend(self._getlinealias(lo) for lo in self.LineOrder)
         morelines = self.getlinealiases()[len(self.LineOrder):]
         headers.extend(morelines)
 
@@ -85,10 +83,11 @@ class DataSeries(LineSeries):
 
         if l:
             values.append(self.datetime.datetime(0))
-            for line in self.LineOrder[1:]:
-                values.append(self.lines[line][0])
-            for i in range(len(self.LineOrder), self.lines.size()):
-                values.append(self.lines[i][0])
+            values.extend(self.lines[line][0] for line in self.LineOrder[1:])
+            values.extend(
+                self.lines[i][0]
+                for i in range(len(self.LineOrder), self.lines.size())
+            )
         else:
             values.extend([''] * self.lines.size())  # no values yet
 
@@ -204,7 +203,7 @@ class _Bar(AutoOrderedDict):
         self.openinterest = data.openinterest[0]
 
         o = self.open
-        if reopen or not o == o:
+        if reopen or o != o:
             self.open = data.open[0]
             return True  # just opened the bar
 

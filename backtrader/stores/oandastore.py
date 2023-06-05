@@ -66,7 +66,7 @@ class API(oandapy.API):
     def request(self, endpoint, method='GET', params=None):
         # Overriden to make something sensible out of a
         # request.RequestException rather than simply issuing a print(str(e))
-        url = '%s/%s' % (self.api_url, endpoint)
+        url = f'{self.api_url}/{endpoint}'
 
         method = method.lower()
         params = params or {}
@@ -117,10 +117,8 @@ class Streamer(oandapy.Streamer):
         if 'ignore_heartbeat' in params:
             ignore_heartbeat = params['ignore_heartbeat']
 
-        request_args = {}
-        request_args['params'] = params
-
-        url = '%s/%s' % (self.api_url, endpoint)
+        request_args = {'params': params}
+        url = f'{self.api_url}/{endpoint}'
 
         while self.connected:
             # Added exception control here
@@ -162,16 +160,15 @@ class Streamer(oandapy.Streamer):
 
 class MetaSingleton(MetaParams):
     '''Metaclass to make a metaclassed class a singleton'''
-    def __init__(cls, name, bases, dct):
-        super(MetaSingleton, cls).__init__(name, bases, dct)
-        cls._singleton = None
+    def __init__(self, name, bases, dct):
+        super(MetaSingleton, self).__init__(name, bases, dct)
+        self._singleton = None
 
-    def __call__(cls, *args, **kwargs):
-        if cls._singleton is None:
-            cls._singleton = (
-                super(MetaSingleton, cls).__call__(*args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        if self._singleton is None:
+            self._singleton = super(MetaSingleton, self).__call__(*args, **kwargs)
 
-        return cls._singleton
+        return self._singleton
 
 
 class OandaStore(with_metaclass(MetaSingleton, object)):
@@ -220,7 +217,7 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
 
         self._env = None  # reference to cerebro for general notifications
         self.broker = None  # broker instance
-        self.datas = list()  # datas that have registered over start
+        self.datas = []
 
         self._orders = collections.OrderedDict()  # map order.ref to oid
         self._ordersrev = collections.OrderedDict()  # map oid to order.ref
@@ -267,7 +264,7 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
     def get_notifications(self):
         '''Return the pending "store" notifications'''
         self.notifs.append(None)  # put a mark / threads could still append
-        return [x for x in iter(self.notifs.popleft, None)]
+        return list(iter(self.notifs.popleft, None))
 
     # Oanda supported granularities
     _GRANULARITIES = {
@@ -300,8 +297,7 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
         except (oandapy.OandaError, OandaRequestError,):
             return None
 
-        poslist = positions.get('positions', [])
-        return poslist
+        return positions.get('positions', [])
 
     def get_granularity(self, timeframe, compression):
         return self._GRANULARITIES.get((timeframe, compression), None)
@@ -463,10 +459,11 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
             self._evt_acct.set()
 
     def order_create(self, order, stopside=None, takeside=None, **kwargs):
-        okwargs = dict()
-        okwargs['instrument'] = order.data._dataname
-        okwargs['units'] = abs(order.created.size)
-        okwargs['side'] = 'buy' if order.isbuy() else 'sell'
+        okwargs = {
+            'instrument': order.data._dataname,
+            'units': abs(order.created.size),
+            'side': 'buy' if order.isbuy() else 'sell',
+        }
         okwargs['type'] = self._ORDEREXECS[order.exectype]
         if order.exectype != bt.Order.Market:
             okwargs['price'] = order.created.price
@@ -513,18 +510,14 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
                 self.broker._reject(oref)
                 return
 
-            # Ids are delivered in different fields and all must be fetched to
-            # match them (as executions) to the order generated here
-            oids = list()
-            for oidfield in self._OIDSINGLE:
-                if oidfield in o and 'id' in o[oidfield]:
-                    oids.append(o[oidfield]['id'])
-
+            oids = [
+                o[oidfield]['id']
+                for oidfield in self._OIDSINGLE
+                if oidfield in o and 'id' in o[oidfield]
+            ]
             for oidfield in self._OIDMULTIPLE:
                 if oidfield in o:
-                    for suboidfield in o[oidfield]:
-                        oids.append(suboidfield['id'])
-
+                    oids.extend(suboidfield['id'] for suboidfield in o[oidfield])
             if not oids:
                 self.broker._reject(oref)
                 return
@@ -594,9 +587,6 @@ class OandaStore(with_metaclass(MetaSingleton, object)):
         elif ttype == 'TRADE_CLOSE':
             oid = trans['id']
             pid = trans['tradeId']
-            if pid in self._orders and False:  # Know nothing about trade
-                return  # can do nothing
-
             # Skip above - at the moment do nothing
             # Received directly from an event in the WebGUI for example which
             # closes an existing position related to order with id -> pid

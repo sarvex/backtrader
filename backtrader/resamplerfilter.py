@@ -187,21 +187,14 @@ class _BaseResampler(with_metaclass(metabase.MetaParams, object)):
         if seteos:
             self._eosset()
 
-        equal = data.datetime[0] == self._nextdteos
         grter = data.datetime[0] > self._nextdteos
 
-        if exact:
-            ret = equal
+        if not exact and grter:
+            ret = (self.bar.isopen() and
+                   self.bar.datetime <= self._nextdteos)
         else:
-            # if the compared data goes over the endofsession
-            # make sure the resampled bar is open and has something before that
-            # end of session. It could be a weekend and nothing was delivered
-            # until Monday
-            if grter:
-                ret = (self.bar.isopen() and
-                       self.bar.datetime <= self._nextdteos)
-            else:
-                ret = equal
+            equal = data.datetime[0] == self._nextdteos
+            ret = equal
 
         if ret:
             self._lasteos = self._nexteos
@@ -215,16 +208,15 @@ class _BaseResampler(with_metaclass(metabase.MetaParams, object)):
         return self._eoscheck(data)
 
     def _barover_weeks(self, data):
-        if self.data._calendar is None:
-            year, week, _ = data.num2date(self.bar.datetime).date().isocalendar()
-            yearweek = year * 100 + week
-
-            baryear, barweek, _ = data.datetime.date().isocalendar()
-            bar_yearweek = baryear * 100 + barweek
-
-            return bar_yearweek > yearweek
-        else:
+        if self.data._calendar is not None:
             return data._calendar.last_weekday(data.datetime.date())
+        year, week, _ = data.num2date(self.bar.datetime).date().isocalendar()
+        yearweek = year * 100 + week
+
+        baryear, barweek, _ = data.datetime.date().isocalendar()
+        bar_yearweek = baryear * 100 + barweek
+
+        return bar_yearweek > yearweek
 
     def _barover_months(self, data):
         dt = data.num2date(self.bar.datetime).date()
@@ -280,11 +272,8 @@ class _BaseResampler(with_metaclass(metabase.MetaParams, object)):
         ret = False
         if barpoint > point:
             # The data bar has surpassed the internal bar
-            if not self.p.bar2edge:
+            if not self.p.bar2edge or self.p.compression == 1:
                 # Compression done on simple bar basis (like days)
-                ret = True
-            elif self.p.compression == 1:
-                # no bar compression requested -> internal bar done
                 ret = True
             else:
                 point_comp = point // self.p.compression
@@ -349,14 +338,6 @@ class _BaseResampler(with_metaclass(metabase.MetaParams, object)):
             # if no extra and decomp bound is point
             return (brest == 0 and point == (bound * self.p.compression), True)
 
-        # Code overriden by eoscheck
-        if False and self.p.sessionend:
-            # Days scenario - get datetime to compare in output timezone
-            # because p.sessionend is expected in output timezone
-            bdtime = data.datetime.datetime()
-            bsend = datetime.combine(bdtime.date(), data.p.sessionend)
-            return bdtime == bsend
-
         return False, True  # subweeks, not subdays and not sessionend
 
     def _calcadjtime(self, greater=False):
@@ -412,8 +393,7 @@ class _BaseResampler(with_metaclass(metabase.MetaParams, object)):
                         second=int(ps), microsecond=int(pus))
         if extradays:
             dt += timedelta(days=extradays)
-        dtnum = self.data.date2num(dt)
-        return dtnum
+        return self.data.date2num(dt)
 
     def _adjusttime(self, greater=False, forcedata=None):
         '''
@@ -536,10 +516,7 @@ class Resampler(_BaseResampler):
                 tframe = self.p.timeframe
                 if tframe == TimeFrame.Ticks:  # Ticks is already the lowest
                     dodeliver = True
-                elif tframe == TimeFrame.Minutes:
-                    dtnum = self._calcadjtime(greater=True)
-                    dodeliver = dtnum <= forcedata.datetime[0]
-                elif tframe == TimeFrame.Days:
+                elif tframe in [TimeFrame.Minutes, TimeFrame.Days]:
                     dtnum = self._calcadjtime(greater=True)
                     dodeliver = dtnum <= forcedata.datetime[0]
             else:
@@ -654,17 +631,7 @@ class Replayer(_BaseResampler):
                     # Update to the point right before the new data
                     data._updatebar(self.bar.lvalues(), forward=False, ago=ago)
 
-                if not fromcheck:
-                    if not consumed:
-                        # Reopen bar with real new data and save data to queue
-                        self.bar.bupdate(data, reopen=True)
-                        # erase is True, but the tick will not be seen below
-                        # and therefore no need to mark as 1st
-                        data._save2stack(erase=True, force=True)
-                    else:
-                        self.bar.bstart(maxdate=True)
-                        self._firstbar = True  # next is first
-                else:  # from check
+                if fromcheck:  # from check
                     # fromcheck or consumed have  forced delivery, reopen
                     self.bar.bstart(maxdate=True)
                     self._firstbar = True  # next is first
@@ -672,6 +639,15 @@ class Replayer(_BaseResampler):
                         # after adjusting need to redeliver if this was a check
                         data._save2stack(erase=True, force=True)
 
+                elif not consumed:
+                    # Reopen bar with real new data and save data to queue
+                    self.bar.bupdate(data, reopen=True)
+                    # erase is True, but the tick will not be seen below
+                    # and therefore no need to mark as 1st
+                    data._save2stack(erase=True, force=True)
+                else:
+                    self.bar.bstart(maxdate=True)
+                    self._firstbar = True  # next is first
             elif not fromcheck:
                 if not consumed:
                     # Data already "forwarded" and we replay to new bar

@@ -30,20 +30,20 @@ from . import fillers as filler
 
 
 class MetaBroker(MetaParams):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''
         Class has already been created ... fill missing methods if needed be
         '''
         # Initialize the class
-        super(MetaBroker, cls).__init__(name, bases, dct)
+        super(MetaBroker, self).__init__(name, bases, dct)
         translations = {
             'get_cash': 'getcash',
             'get_value': 'getvalue',
         }
 
         for attr, trans in translations.items():
-            if not hasattr(cls, attr):
-                setattr(cls, name, getattr(cls, trans))
+            if not hasattr(self, attr):
+                setattr(self, name, getattr(self, trans))
 
 
 class BrokerBase(with_metaclass(MetaBroker, object)):
@@ -52,7 +52,7 @@ class BrokerBase(with_metaclass(MetaBroker, object)):
     )
 
     def __init__(self):
-        self.comminfo = dict()
+        self.comminfo = {}
         self.init()
 
     def init(self):

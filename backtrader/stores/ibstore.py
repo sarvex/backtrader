@@ -84,16 +84,15 @@ class RTVolume(object):
 
 class MetaSingleton(MetaParams):
     '''Metaclass to make a metaclassed class a singleton'''
-    def __init__(cls, name, bases, dct):
-        super(MetaSingleton, cls).__init__(name, bases, dct)
-        cls._singleton = None
+    def __init__(self, name, bases, dct):
+        super(MetaSingleton, self).__init__(name, bases, dct)
+        self._singleton = None
 
-    def __call__(cls, *args, **kwargs):
-        if cls._singleton is None:
-            cls._singleton = (
-                super(MetaSingleton, cls).__call__(*args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        if self._singleton is None:
+            self._singleton = super(MetaSingleton, self).__call__(*args, **kwargs)
 
-        return cls._singleton
+        return self._singleton
 
 
 # Decorator to mark methods to register with ib.opt
@@ -212,7 +211,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         self._env = None  # reference to cerebro for general notifications
         self.broker = None  # broker instance
-        self.datas = list()  # datas that have registered over start
+        self.datas = []
         self.ccount = 0  # requests to start (from cerebro or datas)
 
         self._lock_tmoffset = threading.Lock()
@@ -221,12 +220,12 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # Structures to hold datas requests
         self.qs = collections.OrderedDict()  # key: tickerId -> queues
         self.ts = collections.OrderedDict()  # key: queue -> tickerId
-        self.iscash = dict()  # tickerIds from cash products (for ex: EUR.JPY)
+        self.iscash = {}
 
-        self.histexreq = dict()  # holds segmented historical requests
-        self.histfmt = dict()  # holds datetimeformat for request
-        self.histsend = dict()  # holds sessionend (data time) for request
-        self.histtz = dict()  # holds sessionend (data time) for request
+        self.histexreq = {}
+        self.histfmt = {}
+        self.histsend = {}
+        self.histtz = {}
 
         self.acc_cash = AutoDict()  # current total cash per account
         self.acc_value = AutoDict()  # current total value per account
@@ -241,7 +240,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         self.cdetails = collections.defaultdict(list)  # hold cdetails requests
 
-        self.managed_accounts = list()  # received via managedAccounts
+        self.managed_accounts = []
 
         self.notifs = queue.Queue()  # store notifications for cerebro
 
@@ -399,7 +398,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     def startdatas(self):
         # kickstrat datas, not returning until all of them have been done
-        ts = list()
+        ts = []
         for data in self.datas:
             t = threading.Thread(target=data.reqdata)
             t.start()
@@ -411,7 +410,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     def stopdatas(self):
         # stop subs and force datas out of the loop (in LIFO order)
         qs = list(self.qs.values())
-        ts = list()
+        ts = []
         for data in self.datas:
             t = threading.Thread(target=data.canceldata)
             t.start()
@@ -428,7 +427,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # The background thread could keep on adding notifications. The None
         # mark allows to identify which is the last notification to deliver
         self.notifs.put(None)  # put a mark
-        notifs = list()
+        notifs = []
         while True:
             notif = self.notifs.get()
             if notif is None:  # mark is reached
@@ -630,7 +629,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         return q in self.ts  # queue -> ticker
 
     def getContractDetails(self, contract, maxcount=None):
-        cds = list()
+        cds = []
         q = self.reqContractDetails(contract)
         while True:
             msg = q.get()
@@ -902,8 +901,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # The price field has been seen to be missing in some instances even if
         # "field" is 1
         tickerId = msg.tickerId
-        fieldcode = self.iscash[tickerId]
-        if fieldcode:
+        if fieldcode := self.iscash[tickerId]:
             if msg.field == fieldcode:  # Expected cash field code
                 try:
                     if msg.price == -1.0:
@@ -957,14 +955,9 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 sessionend = self.histsend[tickerId]
                 dt = datetime.strptime(dtstr, '%Y%m%d')
                 dteos = datetime.combine(dt, sessionend)
-                tz = self.histtz[tickerId]
-                if tz:
+                if tz := self.histtz[tickerId]:
                     dteostz = tz.localize(dteos)
                     dteosutc = dteostz.astimezone(UTC).replace(tzinfo=None)
-                    # When requesting for example daily bars, the current day
-                    # will be returned with the already happened data. If the
-                    # session end were added, the new ticks wouldn't make it
-                    # through, because they happen before the end of time
                 else:
                     dteosutc = dteos
 
@@ -1132,10 +1125,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     def getdurations(self,  timeframe, compression):
         key = (timeframe, compression)
-        if key not in self.revdur:
-            return []
-
-        return self.revdur[key]
+        return [] if key not in self.revdur else self.revdur[key]
 
     def getmaxduration(self, timeframe, compression):
         key = (timeframe, compression)
@@ -1148,29 +1138,21 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     def tfcomp_to_size(self, timeframe, compression):
         if timeframe == TimeFrame.Months:
-            return '{} M'.format(compression)
+            return f'{compression} M'
 
         if timeframe == TimeFrame.Weeks:
-            return '{} W'.format(compression)
+            return f'{compression} W'
 
         if timeframe == TimeFrame.Days:
-            if not compression % 7:
-                return '{} W'.format(compression // 7)
-
-            return '{} day'.format(compression)
-
+            return f'{compression // 7} W' if not compression % 7 else f'{compression} day'
         if timeframe == TimeFrame.Minutes:
             if not compression % 60:
                 hours = compression // 60
-                return ('{} hour'.format(hours)) + ('s' * (hours > 1))
+                return f'{hours} hour' + 's' * (hours > 1)
 
-            return ('{} min'.format(compression)) + ('s' * (compression > 1))
+            return f'{compression} min' + 's' * (compression > 1)
 
-        if timeframe == TimeFrame.Seconds:
-            return '{} secs'.format(compression)
-
-        # Microseconds or ticks
-        return None
+        return f'{compression} secs' if timeframe == TimeFrame.Seconds else None
 
     def dt_plus_duration(self, dt, duration):
         size, dim = duration.split()
@@ -1189,10 +1171,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             years, month = divmod(month, 12)
             return dt.replace(year=dt.year + years, month=month + 1)
 
-        if dim == 'Y':
-            return dt.replace(year=dt.year + size)
-
-        return dt  # could do nothing with it ... return it intact
+        return dt.replace(year=dt.year + size) if dim == 'Y' else dt
 
     def calcdurations(self, dtbegin, dtend):
         '''Calculate a duration in between 2 datetimes'''
@@ -1202,7 +1181,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             m = int(duration.split()[0])
             m1 = min(2, m)  # (2, 1) -> 1, (2, 7) -> 2. Bottomline: 1 or 2
             m2 = max(1, m1)  # m1 can only be 1 or 2
-            checkdur = '{} M'.format(m2)
+            checkdur = f'{m2} M'
         elif duration[-1] == 'Y':
             checkdur = '1 Y'
         else:
@@ -1236,20 +1215,20 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         idxsec = bisect.bisect_left(secs, tsecs)
         if idxsec < len(secs):
-            return '{} S'.format(secs[idxsec])
+            return f'{secs[idxsec]} S'
 
         tdextra = bool(td.seconds or td.microseconds)  # over days/weeks
 
         # Next: 1 or 2 days
         days = td.days + tdextra
         if td.days <= 2:
-            return '{} D'.format(days)
+            return f'{days} D'
 
         # Next: 1 or 2 weeks
         weeks, d = divmod(td.days, 7)
         weeks += bool(d or tdextra)
         if weeks <= 2:
-            return '{} W'.format(weeks)
+            return f'{weeks} W'
 
         # Get references to dt components
         y2, m2, d2 = dt2.year, dt2.month, dt2.day
@@ -1346,11 +1325,6 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # the event indicates it's over. It's only false once, and can be used
         # to find out if it has at least been downloaded once
         self._event_accdownload.set()
-        if False:
-            if self.port_update:
-                self.broker.push_portupdate()
-
-                self.port_update = False
 
     @ibregister
     def updatePortfolio(self, msg):
@@ -1379,10 +1353,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # and updates could be happening in the background
         with self._lock_pos:
             position = self.positions[contract.m_conId]
-            if clone:
-                return copy(position)
-
-            return position
+            return copy(position) if clone else position
 
     @ibregister
     def updateAccountValue(self, msg):
@@ -1423,10 +1394,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 if self.connected():
                     self._event_managed_accounts.wait()
 
-                if not self.managed_accounts:
-                    return self.acc_upds.copy()
-
-                elif len(self.managed_accounts) > 1:
+                if not self.managed_accounts or len(self.managed_accounts) > 1:
                     return self.acc_upds.copy()
 
                 # Only 1 account, fall through to return only 1

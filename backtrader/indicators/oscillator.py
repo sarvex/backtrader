@@ -46,7 +46,7 @@ class OscillatorMixIn(Indicator):
     def _plotinit(self):
         try:
             lname = self.lines._getlinealias(0)
-            self.plotlines._0._name = lname + '_osc'
+            self.plotlines._0._name = f'{lname}_osc'
         except AttributeError:
             pass
 
@@ -83,7 +83,7 @@ class Oscillator(Indicator):
     def _plotinit(self):
         try:
             lname = self.dataosc._getlinealias(0)
-            self.plotlines._0._name = lname + '_osc'
+            self.plotlines._0._name = f'{lname}_osc'
         except AttributeError:
             pass
 
@@ -102,23 +102,21 @@ class Oscillator(Indicator):
 
 # Automatic creation of Oscillating Lines
 
-for movav in MovingAverage._movavs[1:]:
-    _newclsdoc = '''
+_newclsdoc = '''
     Oscillation of a %s around its data
     '''
+for movav in MovingAverage._movavs[1:]:
     # Skip aliases - they will be created automatically
     if getattr(movav, 'aliased', ''):
         continue
 
     movname = movav.__name__
     linename = movav.lines._getlinealias(0)
-    newclsname = movname + 'Oscillator'
+    newclsname = f'{movname}Oscillator'
 
-    newaliases = [movname + 'Osc']
+    newaliases = [f'{movname}Osc']
     for alias in getattr(movav, 'alias', []):
-        for suffix in ['Oscillator', 'Osc']:
-            newaliases.append(alias + suffix)
-
+        newaliases.extend(alias + suffix for suffix in ['Oscillator', 'Osc'])
     newclsdoc = _newclsdoc % movname
     newclsdct = {'__doc__': newclsdoc,
                  '__module__': OscillatorMixIn.__module__,

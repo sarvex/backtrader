@@ -50,11 +50,11 @@ class OandaCommInfo(CommInfoBase):
 
 
 class MetaOandaBroker(BrokerBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaOandaBroker, cls).__init__(name, bases, dct)
-        oandastore.OandaStore.BrokerCls = cls
+        super(MetaOandaBroker, self).__init__(name, bases, dct)
+        oandastore.OandaStore.BrokerCls = self
 
 
 class OandaBroker(with_metaclass(MetaOandaBroker, BrokerBase)):
@@ -85,7 +85,7 @@ class OandaBroker(with_metaclass(MetaOandaBroker, BrokerBase)):
         self.notifs = collections.deque()  # holds orders which are notified
 
         self.opending = collections.defaultdict(list)  # pending transmission
-        self.brackets = dict()  # confirmed brackets
+        self.brackets = {}
 
         self.startingcash = self.cash = 0.0
         self.startingvalue = self.value = 0.0
@@ -212,21 +212,21 @@ class OandaBroker(with_metaclass(MetaOandaBroker, BrokerBase)):
         if br is None:
             return
 
-        if not cancel:
-            if len(br) == 3:  # all 3 orders in place, parent was filled
-                br = br[1:]  # discard index 0, parent
-                for o in br:
-                    o.activate()  # simulate activate for children
-                self.brackets[pref] = br  # not done - reinsert children
-
-            elif len(br) == 2:  # filling a children
-                oidx = br.index(order)  # find index to filled (0 or 1)
-                self._cancel(br[1 - oidx].ref)  # cancel remaining (1 - 0 -> 1)
-        else:
+        if cancel:
             # Any cancellation cancel the others
             for o in br:
                 if o.alive():
                     self._cancel(o.ref)
+
+        elif len(br) == 3:  # all 3 orders in place, parent was filled
+            br = br[1:]  # discard index 0, parent
+            for o in br:
+                o.activate()  # simulate activate for children
+            self.brackets[pref] = br  # not done - reinsert children
+
+        elif len(br) == 2:  # filling a children
+            oidx = br.index(order)  # find index to filled (0 or 1)
+            self._cancel(br[1 - oidx].ref)  # cancel remaining (1 - 0 -> 1)
 
     def _fill(self, oref, size, price, ttype, **kwargs):
         order = self.orders[oref]
@@ -348,10 +348,7 @@ class OandaBroker(with_metaclass(MetaOandaBroker, BrokerBase)):
         self.notifs.append(order.clone())
 
     def get_notification(self):
-        if not self.notifs:
-            return None
-
-        return self.notifs.popleft()
+        return None if not self.notifs else self.notifs.popleft()
 
     def next(self):
         self.notifs.append(None)  # mark notification boundary

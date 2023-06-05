@@ -46,7 +46,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -60,24 +60,21 @@ def runstrat(args=None):
     cerebro.adddata(data0)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     cerebro.addanalyzer(bt.analyzers.Calmar)
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
-    st0 = cerebro.run(**eval('dict(' + args.cerebro + ')'))[0]
-    i = 1
-    for k, v in st0.analyzers.calmar.get_analysis().items():
+    st0 = cerebro.run(**eval(f'dict({args.cerebro})'))[0]
+    for i, (k, v) in enumerate(st0.analyzers.calmar.get_analysis().items(), start=1):
         print(i, ': '.join((str(k), str(v))))
-        i += 1
-
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

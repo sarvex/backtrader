@@ -44,14 +44,13 @@ class St(bt.Strategy):
         BuySellArrows(self.data1, barplot=True)  # different markers per data
 
     def next(self):
-        if not self.position:
-            if random.randint(0, 1):
-                self.buy(data=self.data0)
-                self.entered = len(self)
-
-        else:  # in the market
+        if self.position:  # in the market
             if (len(self) - self.entered) >= 10:
                 self.sell(data=self.data1)
+
+        elif random.randint(0, 1):
+            self.buy(data=self.data0)
+            self.entered = len(self)
 
 
 def runstrat(args=None):

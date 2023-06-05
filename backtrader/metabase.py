@@ -30,7 +30,7 @@ from .utils.py3 import zip, string_types, with_metaclass
 
 
 def findbases(kls, topclass):
-    retval = list()
+    retval = []
     for base in kls.__bases__:
         if issubclass(base, topclass):
             retval.extend(findbases(base, topclass))
@@ -64,29 +64,29 @@ def findowner(owned, cls, startlevel=2, skip=None):
 
 
 class MetaBase(type):
-    def doprenew(cls, *args, **kwargs):
-        return cls, args, kwargs
+    def doprenew(self, *args, **kwargs):
+        return self, args, kwargs
 
-    def donew(cls, *args, **kwargs):
-        _obj = cls.__new__(cls, *args, **kwargs)
+    def donew(self, *args, **kwargs):
+        _obj = self.__new__(self, *args, **kwargs)
         return _obj, args, kwargs
 
-    def dopreinit(cls, _obj, *args, **kwargs):
+    def dopreinit(self, _obj, *args, **kwargs):
         return _obj, args, kwargs
 
-    def doinit(cls, _obj, *args, **kwargs):
+    def doinit(self, _obj, *args, **kwargs):
         _obj.__init__(*args, **kwargs)
         return _obj, args, kwargs
 
-    def dopostinit(cls, _obj, *args, **kwargs):
+    def dopostinit(self, _obj, *args, **kwargs):
         return _obj, args, kwargs
 
-    def __call__(cls, *args, **kwargs):
-        cls, args, kwargs = cls.doprenew(*args, **kwargs)
-        _obj, args, kwargs = cls.donew(*args, **kwargs)
-        _obj, args, kwargs = cls.dopreinit(_obj, *args, **kwargs)
-        _obj, args, kwargs = cls.doinit(_obj, *args, **kwargs)
-        _obj, args, kwargs = cls.dopostinit(_obj, *args, **kwargs)
+    def __call__(self, *args, **kwargs):
+        self, args, kwargs = self.doprenew(*args, **kwargs)
+        _obj, args, kwargs = self.donew(*args, **kwargs)
+        _obj, args, kwargs = self.dopreinit(_obj, *args, **kwargs)
+        _obj, args, kwargs = self.doinit(_obj, *args, **kwargs)
+        _obj, args, kwargs = self.dopostinit(_obj, *args, **kwargs)
         return _obj
 
 
@@ -120,7 +120,7 @@ class AutoInfoClass(object):
         info2add.update(info)
 
         clsmodule = sys.modules[cls.__module__]
-        newclsname = str(cls.__name__ + '_' + name)  # str - Python 2/3 compat
+        newclsname = str(f'{cls.__name__}_{name}')
 
         # This loop makes sure that if the name has already been defined, a new
         # unique name is found. A collision example is in the plotlines names
@@ -143,9 +143,7 @@ class AutoInfoClass(object):
         for infoname, infoval in info2add.items():
             if recurse:
                 recursecls = getattr(newcls, infoname, AutoInfoClass)
-                infoval = recursecls._derive(name + '_' + infoname,
-                                             infoval,
-                                             [])
+                infoval = recursecls._derive(f'{name}_{infoname}', infoval, [])
 
             setattr(newcls, infoname, infoval)
 
@@ -240,10 +238,10 @@ class MetaParams(MetaBase):
 
         return cls
 
-    def donew(cls, *args, **kwargs):
-        clsmod = sys.modules[cls.__module__]
+    def donew(self, *args, **kwargs):
+        clsmod = sys.modules[self.__module__]
         # import specified packages
-        for p in cls.packages:
+        for p in self.packages:
             if isinstance(p, (tuple, list)):
                 p, palias = p
             else:
@@ -262,30 +260,26 @@ class MetaParams(MetaBase):
                 setattr(clsmod, palias, pmod)
 
         # import from specified packages - the 2nd part is a string or iterable
-        for p, frompackage in cls.frompackages:
+        for p, frompackage in self.frompackages:
             if isinstance(frompackage, string_types):
                 frompackage = (frompackage,)  # make it a tuple
 
             for fp in frompackage:
-                if isinstance(fp, (tuple, list)):
-                    fp, falias = fp
-                else:
-                    fp, falias = fp, fp  # assumed is string
-
+                fp, falias = fp if isinstance(fp, (tuple, list)) else (fp, fp)
                 # complain "not string" without fp (unicode vs bytes)
                 pmod = __import__(p, fromlist=[str(fp)])
                 pattr = getattr(pmod, fp)
                 setattr(clsmod, falias, pattr)
-                for basecls in cls.__bases__:
+                for basecls in self.__bases__:
                     setattr(sys.modules[basecls.__module__], falias, pattr)
 
         # Create params and set the values from the kwargs
-        params = cls.params()
-        for pname, pdef in cls.params._getitems():
+        params = self.params()
+        for pname, pdef in self.params._getitems():
             setattr(params, pname, kwargs.pop(pname, pdef))
 
         # Create the object and set the params in place
-        _obj, args, kwargs = super(MetaParams, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MetaParams, self).donew(*args, **kwargs)
         _obj.params = params
         _obj.p = params  # shorter alias
 
@@ -305,8 +299,8 @@ class ItemCollection(object):
       - Name (if set in the append operation)
     '''
     def __init__(self):
-        self._items = list()
-        self._names = list()
+        self._items = []
+        self._names = []
 
     def __len__(self):
         return len(self._items)

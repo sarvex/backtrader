@@ -117,7 +117,6 @@ class DayStepsReplayFilter(bt.with_metaclass(bt.MetaParams, object)):
 
     def __init__(self, data):
         self.lastdt = None
-        pass
 
     def __call__(self, data):
         # Make a copy of the new bar and remove it from stream
@@ -178,17 +177,18 @@ class St(bt.Strategy):
 
     def start(self):
         self.callcounter = 0
-        txtfields = list()
-        txtfields.append('Calls')
-        txtfields.append('Len Strat')
-        txtfields.append('Len Data')
-        txtfields.append('Datetime')
-        txtfields.append('Open')
-        txtfields.append('High')
-        txtfields.append('Low')
-        txtfields.append('Close')
-        txtfields.append('Volume')
-        txtfields.append('OpenInterest')
+        txtfields = [
+            'Calls',
+            'Len Strat',
+            'Len Data',
+            'Datetime',
+            'Open',
+            'High',
+            'Low',
+            'Close',
+            'Volume',
+            'OpenInterest',
+        ]
         print(','.join(txtfields))
 
         self.lcontrol = 0  # control if 1st or 2nd call
@@ -208,35 +208,39 @@ class St(bt.Strategy):
     def next(self):
         self.callcounter += 1
 
-        txtfields = list()
-        txtfields.append('%04d' % self.callcounter)
-        txtfields.append('%04d' % len(self))
-        txtfields.append('%04d' % len(self.data0))
-        txtfields.append(self.data.datetime.datetime(0).isoformat())
-        txtfields.append('%.2f' % self.data0.open[0])
-        txtfields.append('%.2f' % self.data0.high[0])
-        txtfields.append('%.2f' % self.data0.low[0])
-        txtfields.append('%.2f' % self.data0.close[0])
-        txtfields.append('%.2f' % self.data0.volume[0])
-        txtfields.append('%.2f' % self.data0.openinterest[0])
+        txtfields = [
+            '%04d' % self.callcounter,
+            '%04d' % len(self),
+            '%04d' % len(self.data0),
+            self.data.datetime.datetime(0).isoformat(),
+        ]
+        txtfields.extend(
+            (
+                '%.2f' % self.data0.open[0],
+                '%.2f' % self.data0.high[0],
+                '%.2f' % self.data0.low[0],
+                '%.2f' % self.data0.close[0],
+                '%.2f' % self.data0.volume[0],
+                '%.2f' % self.data0.openinterest[0],
+            )
+        )
         print(','.join(txtfields))
 
-        if not self.position:
-            if len(self.data) > self.lcontrol:
-                if self.data.high == self.highest:  # today is highest!!!
-                    print('High %.2f > Highest %.2f' %
-                          (self.data.high[0], self.highest[0]))
-                    print('LAST 19 highs:',
-                          self.data.high.get(size=19, ago=-1))
-                    print('-- BUY on date:',
-                          self.data.datetime.date().strftime('%Y-%m-%d'))
-                    ex = bt.Order.Market if self.p.market else bt.Order.Close
-                    self.buy(exectype=ex)
-                    self.inmarket = len(self)  # reset period in market
-
-        else:  # in the market
+        if self.position:  # in the market
             if (len(self) - self.inmarket) >= self.p.sellafter:
                 self.sell()
+
+        elif len(self.data) > self.lcontrol:
+            if self.data.high == self.highest:  # today is highest!!!
+                print('High %.2f > Highest %.2f' %
+                      (self.data.high[0], self.highest[0]))
+                print('LAST 19 highs:',
+                      self.data.high.get(size=19, ago=-1))
+                print('-- BUY on date:',
+                      self.data.datetime.date().strftime('%Y-%m-%d'))
+                ex = bt.Order.Market if self.p.market else bt.Order.Close
+                self.buy(exectype=ex)
+                self.inmarket = len(self)  # reset period in market
 
         self.lcontrol = len(self.data)
 
@@ -248,7 +252,7 @@ def runstrat():
     cerebro.broker.set_cash(args.cash)
     cerebro.broker.set_eosbar(True)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -281,8 +285,8 @@ def runstrat():
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -335,10 +339,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

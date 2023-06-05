@@ -35,23 +35,30 @@ class St(bt.Strategy):
     def __init__(self):
         self.psar0 = bt.ind.ParabolicSAR(self.data0)
         self.psar1 = bt.ind.ParabolicSAR(self.data1)
-        pass
 
     def next(self):
-        txt = []
-        txt.append('{:04d}'.format(len(self)))
-        txt.append('{:04d}'.format(len(self.data0)))
-        txt.append(self.data0.datetime.datetime())
-        txt.append('{:.2f}'.format(self.data0.close[0]))
-        txt.append('PSAR')
-        txt.append('{:04.2f}'.format(self.psar0[0]))
+        txt = [
+            '{:04d}'.format(len(self)),
+            '{:04d}'.format(len(self.data0)),
+            self.data0.datetime.datetime(),
+        ]
+        txt.extend(
+            (
+                '{:.2f}'.format(self.data0.close[0]),
+                'PSAR',
+                '{:04.2f}'.format(self.psar0[0]),
+            )
+        )
         if len(self.data1):
             txt.append('{:04d}'.format(len(self.data1)))
-            txt.append(self.data1.datetime.datetime())
-            txt.append('{:.2f}'.format(self.data1.close[0]))
-            txt.append('PSAR')
-            txt.append('{:04.2f}'.format(self.psar1[0]))
-
+            txt.extend(
+                (
+                    self.data1.datetime.datetime(),
+                    '{:.2f}'.format(self.data1.close[0]),
+                    'PSAR',
+                    '{:04.2f}'.format(self.psar1[0]),
+                )
+            )
         print(','.join(str(x) for x in txt))
 
 
@@ -80,19 +87,19 @@ def runstrat(args=None):
     cerebro.resampledata(data0, timeframe=bt.TimeFrame.Minutes, compression=15)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

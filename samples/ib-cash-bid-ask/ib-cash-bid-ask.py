@@ -33,18 +33,20 @@ import datetime
 
 class St(bt.Strategy):
     def logdata(self):
-        txt = []
-        txt.append('{}'.format(len(self)))
-        txt.append('{}'.format(self.data.datetime.datetime(0).isoformat()))
-        txt.append(' open BID: ' + '{}'.format(self.datas[0].open[0]))
-        txt.append(' open ASK: ' + '{}'.format(self.datas[1].open[0]))
-        txt.append(' high BID: ' + '{}'.format(self.datas[0].high[0]))
-        txt.append(' high ASK: ' + '{}'.format(self.datas[1].high[0]))
-        txt.append(' low BID: ' + '{}'.format(self.datas[0].low[0]))
-        txt.append(' low ASK: ' + '{}'.format(self.datas[1].low[0]))
-        txt.append(' close BID: ' + '{}'.format(self.datas[0].close[0]))
-        txt.append(' close ASK: ' + '{}'.format(self.datas[1].close[0]))
-        txt.append(' volume: ' + '{:.2f}'.format(self.data.volume[0]))
+        txt = [f'{len(self)}', f'{self.data.datetime.datetime(0).isoformat()}']
+        txt.extend(
+            (
+                f' open BID: {self.datas[0].open[0]}',
+                f' open ASK: {self.datas[1].open[0]}',
+                f' high BID: {self.datas[0].high[0]}',
+                f' high ASK: {self.datas[1].high[0]}',
+                f' low BID: {self.datas[0].low[0]}',
+                f' low ASK: {self.datas[1].low[0]}',
+                f' close BID: {self.datas[0].close[0]}',
+                f' close ASK: {self.datas[1].close[0]}',
+                ' volume: ' + '{:.2f}'.format(self.data.volume[0]),
+            )
+        )
         print(','.join(txt))
 
     data_live = False

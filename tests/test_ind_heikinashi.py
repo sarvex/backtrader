@@ -38,15 +38,7 @@ chkind = bt.ind.HeikinAshi
 
 
 def test_run(main=False):
-    if False:
-        datas = [testcommon.getdata(i) for i in range(chkdatas)]
-        testcommon.runtest(datas,
-                           testcommon.TestStrategy,
-                           main=main,
-                           plot=main,
-                           chkind=chkind,
-                           chkmin=chkmin,
-                           chkvals=chkvals)
+    pass
 
 
 if __name__ == '__main__':

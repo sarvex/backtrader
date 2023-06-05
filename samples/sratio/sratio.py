@@ -64,10 +64,7 @@ def parse_args(pargs=None):
                         type=float, default=0.01,
                         help=('Risk free rate (decimal) for the Sharpe Ratio'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

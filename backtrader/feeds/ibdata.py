@@ -33,13 +33,13 @@ from backtrader.stores import ibstore
 
 
 class MetaIBData(DataBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaIBData, cls).__init__(name, bases, dct)
+        super(MetaIBData, self).__init__(name, bases, dct)
 
         # Register with the store
-        ibstore.IBStore.DataCls = cls
+        ibstore.IBStore.DataCls = self
 
 
 class IBData(with_metaclass(MetaIBData, DataBase)):
@@ -295,11 +295,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         if sectype.isdigit():
             expiry = sectype  # save the expiration ate
 
-            if len(sectype) == 6:  # YYYYMM
-                sectype = 'FUT'
-            else:  # Assume OPTIONS - YYYYMMDD
-                sectype = 'OPT'
-
+            sectype = 'FUT' if len(sectype) == 6 else 'OPT'
         if sectype == 'CASH':  # need to address currency for Forex
             symbol, curr = symbol.split('.')
 
@@ -332,12 +328,16 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         except StopIteration:
             pass
 
-        # Make the initial contract
-        precon = self.ib.makecontract(
-            symbol=symbol, sectype=sectype, exch=exch, curr=curr,
-            expiry=expiry, strike=strike, right=right, mult=mult)
-
-        return precon
+        return self.ib.makecontract(
+            symbol=symbol,
+            sectype=sectype,
+            exch=exch,
+            curr=curr,
+            expiry=expiry,
+            strike=strike,
+            right=right,
+            mult=mult,
+        )
 
     def start(self):
         '''Starts the IB connecction and gets the real contract and
@@ -347,12 +347,8 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         self.qlive = self.ib.start(data=self)
         self.qhist = None
 
-        self._usertvol = not self.p.rtbar
         tfcomp = (self._timeframe, self._compression)
-        if tfcomp < self.RTBAR_MINSIZE:
-            # Requested timeframe/compression not supported by rtbars
-            self._usertvol = True
-
+        self._usertvol = True if tfcomp < self.RTBAR_MINSIZE else not self.p.rtbar
         self.contract = None
         self.contractdetails = None
         self.tradecontract = None
@@ -366,7 +362,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
             self._state = self._ST_START  # initial state for _load
         self._statelivereconn = False  # if reconnecting in live state
         self._subcription_valid = False  # subscription state
-        self._storedmsg = dict()  # keep pending live message (under None)
+        self._storedmsg = {}
 
         if not self.ib.connected():
             return
@@ -445,34 +441,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
                     msg = (self._storedmsg.pop(None, None) or
                            self.qlive.get(timeout=self._qcheck))
                 except queue.Empty:
-                    if True:
-                        return None
-
-                # Code invalidated until further checking is done
-                    if not self._statelivereconn:
-                        return None  # indicate timeout situation
-
-                    # Awaiting data and nothing came in - fake it up until now
-                    dtend = self.num2date(date2num(datetime.datetime.utcnow()))
-                    dtbegin = None
-                    if len(self) > 1:
-                        dtbegin = self.num2date(self.datetime[-1])
-
-                    self.qhist = self.ib.reqHistoricalDataEx(
-                        contract=self.contract,
-                        enddate=dtend, begindate=dtbegin,
-                        timeframe=self._timeframe,
-                        compression=self._compression,
-                        what=self.p.what, useRTH=self.p.useRTH, tz=self._tz,
-                        sessionend=self.p.sessionend)
-
-                    if self._laststatus != self.DELAYED:
-                        self.put_notification(self.DELAYED)
-
-                    self._state = self._ST_HISTORBACK
-
-                    self._statelivereconn = False
-                    continue  # to reenter the loop and hit st_historback
+                    return None
 
                 if msg is None:  # Conn broken during historical/backfilling
                     self._subcription_valid = False
@@ -525,14 +494,11 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
 
                 # Process the message according to expected return type
                 if not self._statelivereconn:
-                    if self._laststatus != self.LIVE:
-                        if self.qlive.qsize() <= 1:  # very short live queue
+                    if self.qlive.qsize() <= 1:
+                        if self._laststatus != self.LIVE:  # very short live queue
                             self.put_notification(self.LIVE)
 
-                    if self._usertvol:
-                        ret = self._load_rtvolume(msg)
-                    else:
-                        ret = self._load_rtbar(msg)
+                    ret = self._load_rtvolume(msg) if self._usertvol else self._load_rtbar(msg)
                     if ret:
                         return True
 
@@ -577,12 +543,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
                     self.put_notification(self.DISCONNECTED)
                     return False  # error management cancelled the queue
 
-                elif msg == -354:  # Data not subscribed
-                    self._subcription_valid = False
-                    self.put_notification(self.NOTSUBSCRIBED)
-                    return False
-
-                elif msg == -420:  # No permissions for the data
+                elif msg in [-354, -420]:  # Data not subscribed
                     self._subcription_valid = False
                     self.put_notification(self.NOTSUBSCRIBED)
                     return False
@@ -631,14 +592,8 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
     def _st_start(self):
         if self.p.historical:
             self.put_notification(self.DELAYED)
-            dtend = None
-            if self.todate < float('inf'):
-                dtend = num2date(self.todate)
-
-            dtbegin = None
-            if self.fromdate > float('-inf'):
-                dtbegin = num2date(self.fromdate)
-
+            dtend = num2date(self.todate) if self.todate < float('inf') else None
+            dtbegin = num2date(self.fromdate) if self.fromdate > float('-inf') else None
             self.qhist = self.ib.reqHistoricalDataEx(
                 contract=self.contract, enddate=dtend, begindate=dtbegin,
                 timeframe=self._timeframe, compression=self._compression,

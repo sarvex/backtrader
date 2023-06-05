@@ -60,11 +60,11 @@ class VCCommInfo(CommInfoBase):
 
 
 class MetaVCBroker(BrokerBase.__class__):
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''Class has already been created ... register'''
         # Initialize the class
-        super(MetaVCBroker, cls).__init__(name, bases, dct)
-        vcstore.VCStore.BrokerCls = cls
+        super(MetaVCBroker, self).__init__(name, bases, dct)
+        vcstore.VCStore.BrokerCls = self
 
 
 class VCBroker(with_metaclass(MetaVCBroker, BrokerBase)):
@@ -144,7 +144,7 @@ class VCBroker(with_metaclass(MetaVCBroker, BrokerBase)):
 
         # Order storage
         self._lock_orders = threading.Lock()  # control access
-        self.orderbyid = dict()  # orders by order id
+        self.orderbyid = {}
 
         # Notifications
         self.notifs = collections.deque()
@@ -241,21 +241,19 @@ class VCBroker(with_metaclass(MetaVCBroker, BrokerBase)):
         # order.UserName = 'danjrod'  # str(tradeid)
         # order.OrderId = 'a' * 50  # str(tradeid)
         order.UserOrderId = ''
-        if tradeid:
-            order.ExtendedInfo = 'TradeId {}'.format(tradeid)
-        else:
-            order.ExtendedInfo = ''
-
+        order.ExtendedInfo = f'TradeId {tradeid}' if tradeid else ''
         order.Volume = abs(size)
 
         order.StopPrice = 0.0
         order.Price = 0.0
-        if exectype == Order.Market:
+        if (
+            exectype == Order.Market
+            or exectype != Order.Limit
+            and exectype == Order.Close
+        ):
             pass
         elif exectype == Order.Limit:
             order.Price = price or plimit  # cover naming confusion cases
-        elif exectype == Order.Close:
-            pass
         elif exectype == Order.Stop:
             order.StopPrice = price
         elif exectype == Order.StopLimit:
@@ -265,26 +263,34 @@ class VCBroker(with_metaclass(MetaVCBroker, BrokerBase)):
         order.ValidDate = None
         if exectype == Order.Close:
             order.TimeRestriction = self._otrestriction[Order.T_Close]
-        else:
-            if valid is None:
-                order.TimeRestriction = self._otrestriction[Order.T_None]
-            elif isinstance(valid, (datetime, date)):
-                order.TimeRestriction = self._otrestriction[Order.T_Date]
-                order.ValidDate = valid
-            elif isinstance(valid, (timedelta,)):
-                if valid == Order.DAY:
-                    order.TimeRestriction = self._otrestriction[Order.T_Day]
-                else:
-                    order.TimeRestriction = self._otrestriction[Order.T_Date]
-                    order.ValidDate = datetime.now() + valid
+        elif (
+            valid is not None
+            and not isinstance(valid, (datetime, date))
+            and isinstance(valid, (timedelta,))
+            and valid == Order.DAY
+            or valid is not None
+            and not isinstance(valid, (datetime, date))
+            and not isinstance(valid, (timedelta,))
+            and not self.valid
+        ):
+            order.TimeRestriction = self._otrestriction[Order.T_Day]
+        elif (
+            valid is not None
+            and not isinstance(valid, (datetime, date))
+            and isinstance(valid, (timedelta,))
+        ):
+            order.TimeRestriction = self._otrestriction[Order.T_Date]
+            order.ValidDate = datetime.now() + valid
 
-            elif not self.valid:  # DAY
-                order.TimeRestriction = self._otrestriction[Order.T_Day]
-
+        elif valid is None:
+            order.TimeRestriction = self._otrestriction[Order.T_None]
+        elif isinstance(valid, (datetime, date)):
+            order.TimeRestriction = self._otrestriction[Order.T_Date]
+            order.ValidDate = valid
         # Support for custom user arguments
-        for k in kwargs:
+        for k, v in kwargs.items():
             if hasattr(order, k):
-                setattr(order, k, kwargs[k])
+                setattr(order, k, v)
 
         return order
 

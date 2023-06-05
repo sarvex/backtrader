@@ -98,7 +98,7 @@ def runstrat():
     print('==================================================')
 
     # print out the result
-    print('Time used:', str(tend - tstart))
+    print('Time used:', tend - tstart)
 
 
 def parse_args():

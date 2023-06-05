@@ -283,16 +283,13 @@ class MultiCursor2(Widget):
         else:
             self.vlines = []
 
+        self.hlines = []
         if horizOn:
-            self.hlines = []
             for ax in axes:
                 ymin, ymax = ax.get_ylim()
                 ymid = 0.5 * (ymin + ymax)
                 hline = ax.axhline(ymid, visible=False, **lineprops)
                 self.hlines.append(hline)
-        else:
-            self.hlines = []
-
         self.connect()
 
     def connect(self):

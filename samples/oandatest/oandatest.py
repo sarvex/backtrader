@@ -49,7 +49,7 @@ class TestStrategy(bt.Strategy):
 
     def __init__(self):
         # To control operation entries
-        self.orderid = list()
+        self.orderid = []
         self.order = None
 
         self.counttostop = 0
@@ -88,35 +88,43 @@ class TestStrategy(bt.Strategy):
         self.next(frompre=True)
 
     def next(self, frompre=False):
-        txt = list()
-        txt.append('Data0')
-        txt.append('%04d' % len(self.data0))
+        txt = ['Data0', '%04d' % len(self.data0)]
         dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-        txt.append('{:f}'.format(self.data.datetime[0]))
-        txt.append('%s' % self.data.datetime.datetime(0).strftime(dtfmt))
-        txt.append('{:f}'.format(self.data.open[0]))
-        txt.append('{:f}'.format(self.data.high[0]))
-        txt.append('{:f}'.format(self.data.low[0]))
-        txt.append('{:f}'.format(self.data.close[0]))
-        txt.append('{:6d}'.format(int(self.data.volume[0])))
-        txt.append('{:d}'.format(int(self.data.openinterest[0])))
-        txt.append('{:f}'.format(self.sma[0]))
+        txt.extend(
+            (
+                '{:f}'.format(self.data.datetime[0]),
+                '%s' % self.data.datetime.datetime(0).strftime(dtfmt),
+                '{:f}'.format(self.data.open[0]),
+                '{:f}'.format(self.data.high[0]),
+                '{:f}'.format(self.data.low[0]),
+                '{:f}'.format(self.data.close[0]),
+                '{:6d}'.format(int(self.data.volume[0])),
+                '{:d}'.format(int(self.data.openinterest[0])),
+                '{:f}'.format(self.sma[0]),
+            )
+        )
         print(', '.join(txt))
 
         if len(self.datas) > 1 and len(self.data1):
-            txt = list()
-            txt.append('Data1')
-            txt.append('%04d' % len(self.data1))
+            txt = ['Data1', '%04d' % len(self.data1)]
             dtfmt = '%Y-%m-%dT%H:%M:%S.%f'
-            txt.append('{}'.format(self.data1.datetime[0]))
-            txt.append('%s' % self.data1.datetime.datetime(0).strftime(dtfmt))
-            txt.append('{}'.format(self.data1.open[0]))
-            txt.append('{}'.format(self.data1.high[0]))
-            txt.append('{}'.format(self.data1.low[0]))
-            txt.append('{}'.format(self.data1.close[0]))
-            txt.append('{}'.format(self.data1.volume[0]))
-            txt.append('{}'.format(self.data1.openinterest[0]))
-            txt.append('{}'.format(float('NaN')))
+            txt.extend(
+                (
+                    '{}'.format(self.data1.datetime[0]),
+                    '%s' % self.data1.datetime.datetime(0).strftime(dtfmt),
+                    '{}'.format(self.data1.open[0]),
+                    '{}'.format(self.data1.high[0]),
+                    '{}'.format(self.data1.low[0]),
+                    '{}'.format(self.data1.close[0]),
+                )
+            )
+            txt.extend(
+                (
+                    '{}'.format(self.data1.volume[0]),
+                    '{}'.format(self.data1.openinterest[0]),
+                    '{}'.format(float('NaN')),
+                )
+            )
             print(', '.join(txt))
 
         if self.counttostop:  # stop after x live lines
@@ -204,11 +212,7 @@ def runstrategy():
         store = StoreCls(**storekwargs)
 
     if args.broker:
-        if args.no_store:
-            broker = BrokerCls(**storekwargs)
-        else:
-            broker = store.getbroker()
-
+        broker = BrokerCls(**storekwargs) if args.no_store else store.getbroker()
         cerebro.setbroker(broker)
 
     timeframe = bt.TimeFrame.TFrame(args.timeframe)
@@ -247,7 +251,7 @@ def runstrategy():
     )
 
     if args.no_store and not args.broker:   # neither store nor broker
-        datakwargs.update(storekwargs)  # pass the store args over the data
+        datakwargs |= storekwargs
 
     data0 = DataFactory(dataname=args.data0, **datakwargs)
 
@@ -289,10 +293,7 @@ def runstrategy():
         if data1 is not None:
             cerebro.adddata(data1)
 
-    if args.valid is None:
-        valid = None
-    else:
-        valid = datetime.timedelta(seconds=args.valid)
+    valid = None if args.valid is None else datetime.timedelta(seconds=args.valid)
     # Add the strategy
     cerebro.addstrategy(TestStrategy,
                         smaperiod=args.smaperiod,
@@ -308,12 +309,12 @@ def runstrategy():
 
     # Live data ... avoid long data accumulation by switching to "exactbars"
     cerebro.run(exactbars=args.exactbars)
-    if args.exactbars < 1:  # plotting is possible
+    if args.exactbars < 1:
         if args.plot:
             pkwargs = dict(style='line')
             if args.plot is not True:  # evals to True but is not True
-                npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-                pkwargs.update(npkwargs)
+                npkwargs = eval(f'dict({args.plot})')
+                pkwargs |= npkwargs
 
             cerebro.plot(**pkwargs)
 
@@ -488,10 +489,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

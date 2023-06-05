@@ -142,7 +142,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
     cerebro.broker.set_cash(args.cash)
 
-    dkwargs = dict()
+    dkwargs = {}
     if args.fromdate is not None:
         fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
         dkwargs['fromdate'] = fromdate
@@ -155,10 +155,10 @@ def runstrat(args=None):
     data0 = bt.feeds.YahooFinanceCSVData(dataname=args.data0, **dkwargs)
     cerebro.adddata(data0, name='MyData0')
 
-    st0kwargs = dict()
+    st0kwargs = {}
     if args.st0 is not None:
-        tmpdict = eval('dict(' + args.st0 + ')')  # args were passed
-        st0kwargs.update(tmpdict)
+        tmpdict = eval(f'dict({args.st0})')
+        st0kwargs |= tmpdict
 
     cerebro.addstrategy(TheStrategy,
                         myname='St1', dtarget='MyData0', **st0kwargs)
@@ -171,10 +171,10 @@ def runstrat(args=None):
     else:  # use same target
         dtarget = 'MyData0'
 
-    st1kwargs = dict()
+    st1kwargs = {}
     if args.st1 is not None:
-        tmpdict = eval('dict(' + args.st1 + ')')  # args were passed
-        st1kwargs.update(tmpdict)
+        tmpdict = eval(f'dict({args.st1})')
+        st1kwargs |= tmpdict
 
     cerebro.addstrategy(TheStrategy2,
                         myname='St2', dtarget=dtarget, **st1kwargs)
@@ -184,8 +184,8 @@ def runstrat(args=None):
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -239,10 +239,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

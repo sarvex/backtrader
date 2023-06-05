@@ -44,10 +44,9 @@ class St(bt.Strategy):
     )
 
     def notify_order(self, order):
-        print('{}: Order ref: {} / Type {} / Status {}'.format(
-            self.data.datetime.date(0),
-            order.ref, 'Buy' * order.isbuy() or 'Sell',
-            order.getstatusname()))
+        print(
+            f"{self.data.datetime.date(0)}: Order ref: {order.ref} / Type {'Buy' * order.isbuy() or 'Sell'} / Status {order.getstatusname()}"
+        )
 
         if order.status == order.Completed:
             self.holdstart = len(self)
@@ -59,7 +58,7 @@ class St(bt.Strategy):
         ma1, ma2 = self.p.ma(period=self.p.p1), self.p.ma(period=self.p.p2)
         self.cross = bt.ind.CrossOver(ma1, ma2)
 
-        self.orefs = list()
+        self.orefs = []
 
         if self.p.usetarget:
             print('-' * 5, 'Using order_target_size')
@@ -73,50 +72,46 @@ class St(bt.Strategy):
         if self.orefs:
             return  # pending orders do nothing
 
-        if not self.position:
-            if self.cross > 0.0:  # crossing up
-
-                p1 = self.data.close[0] * (1.0 - self.p.limit)
-                p2 = self.data.close[0] * (1.0 - 2 * 2 * self.p.limit)
-                p3 = self.data.close[0] * (1.0 - 3 * 3 * self.p.limit)
-
-                valid1 = datetime.timedelta(self.p.limdays)
-                valid2 = valid3 = datetime.timedelta(self.p.limdays2)
-
-                if self.p.switchp1p2:
-                    p1, p2 = p2, p1
-                    valid1, valid2 = valid2, valid1
-
-                print('valid1 is:', valid1)
-
-                kargs = dict(exectype=bt.Order.Limit)
-                kargs[('target' * self.p.usetarget) or 'size'] = 1
-
-                o1 = self._dobuy(price=p1, valid=valid1, **kargs)
-                print('{}: Oref {} / Buy at {}'.format(
-                    self.datetime.date(), o1.ref, p1))
-
-                oco2 = o1 if self.p.do_oco else None
-                o2 = self._dobuy(price=p2, valid=valid2, oco=oco2, **kargs)
-
-                print('{}: Oref {} / Buy at {}'.format(
-                    self.datetime.date(), o2.ref, p2))
-
-                if self.p.do_oco:
-                    oco3 = o1 if not self.p.oco1oco2 else oco2
-                else:
-                    oco3 = None
-
-                o3 = self._dobuy(price=p3, valid=valid3, oco=oco3, **kargs)
-
-                print('{}: Oref {} / Buy at {}'.format(
-                    self.datetime.date(), o3.ref, p3))
-
-                self.orefs = [o1.ref, o2.ref, o3.ref]
-
-        else:  # in the market
+        if self.position:  # in the market
             if (len(self) - self.holdstart) >= self.p.hold:
                 self._doclose()
+
+        elif self.cross > 0.0:  # crossing up
+
+            p1 = self.data.close[0] * (1.0 - self.p.limit)
+            p2 = self.data.close[0] * (1.0 - 2 * 2 * self.p.limit)
+            p3 = self.data.close[0] * (1.0 - 3 * 3 * self.p.limit)
+
+            valid1 = datetime.timedelta(self.p.limdays)
+            valid2 = valid3 = datetime.timedelta(self.p.limdays2)
+
+            if self.p.switchp1p2:
+                p1, p2 = p2, p1
+                valid1, valid2 = valid2, valid1
+
+            print('valid1 is:', valid1)
+
+            kargs = dict(exectype=bt.Order.Limit)
+            kargs[('target' * self.p.usetarget) or 'size'] = 1
+
+            o1 = self._dobuy(price=p1, valid=valid1, **kargs)
+            print(f'{self.datetime.date()}: Oref {o1.ref} / Buy at {p1}')
+
+            oco2 = o1 if self.p.do_oco else None
+            o2 = self._dobuy(price=p2, valid=valid2, oco=oco2, **kargs)
+
+            print(f'{self.datetime.date()}: Oref {o2.ref} / Buy at {p2}')
+
+            if self.p.do_oco:
+                oco3 = o1 if not self.p.oco1oco2 else oco2
+            else:
+                oco3 = None
+
+            o3 = self._dobuy(price=p3, valid=valid3, oco=oco3, **kargs)
+
+            print(f'{self.datetime.date()}: Oref {o3.ref} / Buy at {p3}')
+
+            self.orefs = [o1.ref, o2.ref, o3.ref]
 
 
 def runstrat(args=None):
@@ -125,7 +120,7 @@ def runstrat(args=None):
     cerebro = bt.Cerebro()
 
     # Data feed kwargs
-    kwargs = dict()
+    kwargs = {}
 
     # Parse from/to-date
     dtfmt, tmfmt = '%Y-%m-%d', 'T%H:%M:%S'
@@ -139,19 +134,19 @@ def runstrat(args=None):
     cerebro.adddata(data0)
 
     # Broker
-    cerebro.broker = bt.brokers.BackBroker(**eval('dict(' + args.broker + ')'))
+    cerebro.broker = bt.brokers.BackBroker(**eval(f'dict({args.broker})'))
 
     # Sizer
-    cerebro.addsizer(bt.sizers.FixedSize, **eval('dict(' + args.sizer + ')'))
+    cerebro.addsizer(bt.sizers.FixedSize, **eval(f'dict({args.sizer})'))
 
     # Strategy
-    cerebro.addstrategy(St, **eval('dict(' + args.strat + ')'))
+    cerebro.addstrategy(St, **eval(f'dict({args.strat})'))
 
     # Execute
-    cerebro.run(**eval('dict(' + args.cerebro + ')'))
+    cerebro.run(**eval(f'dict({args.cerebro})'))
 
     if args.plot:  # Plot if requested to
-        cerebro.plot(**eval('dict(' + args.plot + ')'))
+        cerebro.plot(**eval(f'dict({args.plot})'))
 
 
 def parse_args(pargs=None):

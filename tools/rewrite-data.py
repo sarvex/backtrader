@@ -54,40 +54,32 @@ class RewriteStrategy(bt.Strategy):
     )
 
     def start(self):
-        if self.p.outfile is None:
-            self.f = sys.stdout
-        else:
-            self.f = open(self.p.outfile, 'wb')
-
-        if self.data._timeframe < bt.TimeFrame.Days:
-            headers = 'Date,Time,Open,High,Low,Close,Volume,OpenInterest'
-        else:
-            headers = 'Date,Open,High,Low,Close,Volume,OpenInterest'
-
-        headers += '\n'
+        self.f = sys.stdout if self.p.outfile is None else open(self.p.outfile, 'wb')
+        headers = (
+            'Date,Time,Open,High,Low,Close,Volume,OpenInterest'
+            if self.data._timeframe < bt.TimeFrame.Days
+            else 'Date,Open,High,Low,Close,Volume,OpenInterest'
+        ) + '\n'
         self.f.write(bytes(headers))
 
     def next(self):
-        fields = list()
         dt = self.data.datetime.date(0).strftime('%Y-%m-%d')
-        fields.append(dt)
+        fields = [dt]
         if self.data._timeframe < bt.TimeFrame.Days:
             tm = self.data.datetime.time(0).strftime('%H:%M:%S')
             fields.append(tm)
 
         o = '%.2f' % self.data.open[0]
-        fields.append(o)
-        h = '%.2f' % self.data.high[0]
-        fields.append(h)
-        l = '%.2f' % self.data.low[0]
-        fields.append(l)
-        c = '%.2f' % self.data.close[0]
-        fields.append(c)
-        v = '%d' % self.data.volume[0]
-        fields.append(v)
-        oi = '%d' % self.data.openinterest[0]
-        fields.append(oi)
-
+        fields.extend(
+            (
+                o,
+                '%.2f' % self.data.high[0],
+                '%.2f' % self.data.low[0],
+                '%.2f' % self.data.close[0],
+                '%d' % self.data.volume[0],
+                '%d' % self.data.openinterest[0],
+            )
+        )
         txt = self.p.separator.join(fields)
         txt += '\n'
         self.f.write(bytes(txt))
@@ -98,7 +90,7 @@ def runstrat(pargs=None):
 
     cerebro = bt.Cerebro()
 
-    dfkwargs = dict()
+    dfkwargs = {}
     if args.format == 'yahoo_unreversed':
         dfkwargs['reverse'] = True
 
@@ -132,8 +124,8 @@ def runstrat(pargs=None):
     if args.plot:
         pkwargs = dict(style='bar')
         if args.plot is not True:  # evals to True but is not True
-            npkwargs = eval('dict(' + args.plot + ')')  # args were passed
-            pkwargs.update(npkwargs)
+            npkwargs = eval(f'dict({args.plot})')
+            pkwargs |= npkwargs
 
         cerebro.plot(**pkwargs)
 
@@ -172,10 +164,7 @@ def parse_args(pargs=None):
                               '\n'
                               '  --plot style="candle" (to plot candles)\n'))
 
-    if pargs is not None:
-        return parser.parse_args(pargs)
-
-    return parser.parse_args()
+    return parser.parse_args(pargs) if pargs is not None else parser.parse_args()
 
 
 if __name__ == '__main__':

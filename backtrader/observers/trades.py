@@ -105,17 +105,17 @@ class Trades(Observer):
 
 
 class MetaDataTrades(Observer.__class__):
-    def donew(cls, *args, **kwargs):
-        _obj, args, kwargs = super(MetaDataTrades, cls).donew(*args, **kwargs)
+    def donew(self, *args, **kwargs):
+        _obj, args, kwargs = super(MetaDataTrades, self).donew(*args, **kwargs)
 
         # Recreate the lines dynamically
         if _obj.params.usenames:
             lnames = tuple(x._name for x in _obj.datas)
         else:
-            lnames = tuple('data{}'.format(x) for x in range(len(_obj.datas)))
+            lnames = tuple(f'data{x}' for x in range(len(_obj.datas)))
 
         # Generate a new lines class
-        linescls = cls.lines._derive(uuid.uuid4().hex, lnames, 0, ())
+        linescls = self.lines._derive(uuid.uuid4().hex, lnames, 0, ())
 
         # Instantiate lines
         _obj.lines = linescls()
@@ -129,13 +129,12 @@ class MetaDataTrades(Observer.__class__):
 
         basedict = dict(ls='', markersize=8.0, fillstyle='full')
 
-        plines = dict()
+        plines = {}
         for lname, marker, color in zip(lnames, markers, colors):
             plines[lname] = d = basedict.copy()
             d.update(marker=marker, color=color)
 
-        plotlines = cls.plotlines._derive(
-            uuid.uuid4().hex, plines, [], recurse=True)
+        plotlines = self.plotlines._derive(uuid.uuid4().hex, plines, [], recurse=True)
         _obj.plotlines = plotlines()
 
         return _obj, args, kwargs  # return the instantiated object and args

@@ -36,9 +36,8 @@ from . import metabase
 
 
 class MetaLineIterator(LineSeries.__class__):
-    def donew(cls, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaLineIterator, cls).donew(*args, **kwargs)
+    def donew(self, *args, **kwargs):
+        _obj, args, kwargs = super(MetaLineIterator, self).donew(*args, **kwargs)
 
         # Prepare to hold children that need to be calculated and
         # influence minperiod - Moved here to support LineNum below
@@ -70,7 +69,7 @@ class MetaLineIterator(LineSeries.__class__):
         # If no datas have been passed to an indicator ... use the
         # main datas of the owner, easing up adding "self.data" ...
         if not _obj.datas and isinstance(_obj, (IndicatorBase, ObserverBase)):
-            _obj.datas = _obj._owner.datas[0:mindatas]
+            _obj.datas = _obj._owner.datas[:mindatas]
 
         # Create a dictionary to be able to check for presence
         # lists in python use "==" operator when testing for presence with "in"
@@ -83,17 +82,15 @@ class MetaLineIterator(LineSeries.__class__):
             _obj.data = data = _obj.datas[0]
 
             for l, line in enumerate(data.lines):
-                linealias = data._getlinealias(l)
-                if linealias:
-                    setattr(_obj, 'data_%s' % linealias, line)
+                if linealias := data._getlinealias(l):
+                    setattr(_obj, f'data_{linealias}', line)
                 setattr(_obj, 'data_%d' % l, line)
 
             for d, data in enumerate(_obj.datas):
                 setattr(_obj, 'data%d' % d, data)
 
                 for l, line in enumerate(data.lines):
-                    linealias = data._getlinealias(l)
-                    if linealias:
+                    if linealias := data._getlinealias(l):
                         setattr(_obj, 'data%d_%s' % (d, linealias), line)
                     setattr(_obj, 'data%d_%d' % (d, l), line)
 
@@ -103,9 +100,10 @@ class MetaLineIterator(LineSeries.__class__):
 
         return _obj, newargs, kwargs
 
-    def dopreinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaLineIterator, cls).dopreinit(_obj, *args, **kwargs)
+    def dopreinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaLineIterator, self).dopreinit(
+            _obj, *args, **kwargs
+        )
 
         # if no datas were found use, use the _owner (to have a clock)
         _obj.datas = _obj.datas or [_obj._owner]
@@ -118,7 +116,7 @@ class MetaLineIterator(LineSeries.__class__):
         # A data could be an indicator and it could take x bars until
         # something is produced
         _obj._minperiod = \
-            max([x._minperiod for x in _obj.datas] or [_obj._minperiod])
+                max([x._minperiod for x in _obj.datas] or [_obj._minperiod])
 
         # The lines carry at least the same minperiod as
         # that provided by the datas
@@ -127,12 +125,13 @@ class MetaLineIterator(LineSeries.__class__):
 
         return _obj, args, kwargs
 
-    def dopostinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaLineIterator, cls).dopostinit(_obj, *args, **kwargs)
+    def dopostinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaLineIterator, self).dopostinit(
+            _obj, *args, **kwargs
+        )
 
         # my minperiod is as large as the minperiod of my lines
-        _obj._minperiod = max([x._minperiod for x in _obj.lines])
+        _obj._minperiod = max(x._minperiod for x in _obj.lines)
 
         # Recalc the period
         _obj._periodrecalc()
@@ -224,19 +223,17 @@ class LineIterator(with_metaclass(MetaLineIterator, LineSeries)):
         if not owner:
             owner = 0
 
-        if isinstance(owner, string_types):
+        if isinstance(owner, string_types) or not isinstance(
+            owner, collections.Iterable
+        ):
             owner = [owner]
-        elif not isinstance(owner, collections.Iterable):
-            owner = [owner]
-
         if not own:
             own = range(len(owner))
 
-        if isinstance(own, string_types):
+        if isinstance(own, string_types) or not isinstance(
+            own, collections.Iterable
+        ):
             own = [own]
-        elif not isinstance(own, collections.Iterable):
-            own = [own]
-
         for lineowner, lineown in zip(owner, own):
             if isinstance(lineowner, string_types):
                 lownerref = getattr(self._owner.lines, lineowner)
@@ -273,15 +270,12 @@ class LineIterator(with_metaclass(MetaLineIterator, LineSeries)):
                 self.nextstart()  # only called for the 1st value
             else:
                 self.prenext()
-        else:
-            # assume indicators and others operate on same length datas
-            # although the above operation can be generalized
-            if clock_len > self._minperiod:
-                self.next()
-            elif clock_len == self._minperiod:
-                self.nextstart()  # only called for the 1st value
-            elif clock_len:
-                self.prenext()
+        elif clock_len > self._minperiod:
+            self.next()
+        elif clock_len == self._minperiod:
+            self.nextstart()  # only called for the 1st value
+        elif clock_len:
+            self.prenext()
 
     def _clk_update(self):
         clock_len = len(self._clock)
@@ -477,8 +471,8 @@ def LinesCoupler(cdata, clock=None, **kwargs):
                 if nclock is not None:
                     clock = nclock
 
-        if clock is None:
-            clock = obj._owner
+    if clock is None:
+        clock = obj._owner
 
     obj._clock = clock
     return obj

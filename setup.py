@@ -37,8 +37,8 @@ with open(os.path.join(pname, vname)) as f:
     exec(compile(f.read(), vname, 'exec'))
 
 # Generate links
-gurl = 'https://github.com/mementum/' + pname
-gdurl = gurl + '/tarball/' + __version__
+gurl = f'https://github.com/mementum/{pname}'
+gdurl = f'{gurl}/tarball/{__version__}'
 
 setuptools.setup(
     name=pname,

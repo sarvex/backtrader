@@ -51,7 +51,7 @@ class MultiDataStrategy(bt.Strategy):
         if self.p.printout:
             dt = dt or self.data.datetime[0]
             dt = bt.num2date(dt)
-            print('%s, %s' % (dt.isoformat(), txt))
+            print(f'{dt.isoformat()}, {txt}')
 
     def notify_order(self, order):
         if order.status in [bt.Order.Submitted, bt.Order.Accepted]:
@@ -66,9 +66,7 @@ class MultiDataStrategy(bt.Strategy):
                 self.log(selltxt, order.executed.dt)
 
         elif order.status in [order.Expired, order.Canceled, order.Margin]:
-            self.log('%s ,' % order.Status[order.status])
-            pass  # Simply log
-
+            self.log(f'{order.Status[order.status]} ,')
         # Allow new orders
         self.orderid = None
 
@@ -95,17 +93,16 @@ class MultiDataStrategy(bt.Strategy):
             print('Data0 dt:', self.data0.datetime.datetime())
             print('Data1 dt:', self.data1.datetime.datetime())
 
-        if not self.position:  # not yet in market
-            if self.signal > 0.0:  # cross upwards
-                self.log('BUY CREATE , %.2f' % self.data1.close[0])
-                self.buy(size=self.p.stake)
-                self.buy(data=self.data1, size=self.p.stake)
-
-        else:  # in the market
+        if self.position:  # in the market
             if self.signal < 0.0:  # crosss downwards
                 self.log('SELL CREATE , %.2f' % self.data1.close[0])
                 self.sell(size=self.p.stake)
                 self.sell(data=self.data1, size=self.p.stake)
+
+        elif self.signal > 0.0:  # cross upwards
+            self.log('BUY CREATE , %.2f' % self.data1.close[0])
+            self.buy(size=self.p.stake)
+            self.buy(data=self.data1, size=self.p.stake)
 
     def stop(self):
         print('==================================================')

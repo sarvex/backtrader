@@ -158,20 +158,17 @@ class SharpeRatio(Analyzer):
 
             # Hack to identify old code
             if self.p.timeframe == TimeFrame.Days and \
-               self.p.daysfactor is not None:
+                   self.p.daysfactor is not None:
 
                 factor = self.p.daysfactor
 
-            else:
-                if self.p.factor is not None:
-                    factor = self.p.factor  # user specified factor
-                elif self.p.timeframe in self.RATEFACTORS:
-                    # Get the conversion factor from the default table
-                    factor = self.RATEFACTORS[self.p.timeframe]
+            elif self.p.factor is not None:
+                factor = self.p.factor  # user specified factor
+            elif self.p.timeframe in self.RATEFACTORS:
+                # Get the conversion factor from the default table
+                factor = self.RATEFACTORS[self.p.timeframe]
 
             if factor is not None:
-                # A factor was found
-
                 if self.p.convertrate:
                     # Standard: downgrade annual returns to timeframe factor
                     rate = pow(1.0 + rate, 1.0 / factor) - 1.0
@@ -179,9 +176,7 @@ class SharpeRatio(Analyzer):
                     # Else upgrade returns to yearly returns
                     returns = [pow(1.0 + x, factor) - 1.0 for x in returns]
 
-            lrets = len(returns) - self.p.stddev_sample
-            # Check if the ratio can be calculated
-            if lrets:
+            if lrets := len(returns) - self.p.stddev_sample:
                 # Get the excess returns - arithmetic mean - original sharpe
                 ret_free = [r - rate for r in returns]
                 ret_free_avg = average(ret_free)
@@ -192,7 +187,7 @@ class SharpeRatio(Analyzer):
                     ratio = ret_free_avg / retdev
 
                     if factor is not None and \
-                       self.p.convertrate and self.p.annualize:
+                           self.p.convertrate and self.p.annualize:
 
                         ratio = math.sqrt(factor) * ratio
                 except (ValueError, TypeError, ZeroDivisionError):

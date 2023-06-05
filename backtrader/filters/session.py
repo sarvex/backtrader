@@ -130,12 +130,10 @@ class SessionFiller(with_metaclass(metabase.MetaParams, object)):
                                          sessstart - self._tdunit, dtime_cur)
 
             self.seenbar = True
-            self.dtime_prev = dtime_cur
-
         else:
             # Seen a previous bar and this is in the session - fill up to it
             ret = self._fillbars(data, self.dtime_prev, dtime_cur)
-            self.dtime_prev = dtime_cur
+        self.dtime_prev = dtime_cur
 
         return ret
 

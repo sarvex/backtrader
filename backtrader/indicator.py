@@ -38,7 +38,7 @@ class MetaIndicator(IndicatorBase.__class__):
 
     @classmethod
     def cleancache(cls):
-        cls._icache = dict()
+        cls._icache = {}
 
     @classmethod
     def usecache(cls, onoff):
@@ -48,43 +48,42 @@ class MetaIndicator(IndicatorBase.__class__):
     # inside another object, the minperiod information carried over
     # influences the first usage when being modified during the 2nd usage
 
-    def __call__(cls, *args, **kwargs):
-        if not cls._icacheuse:
-            return super(MetaIndicator, cls).__call__(*args, **kwargs)
+    def __call__(self, *args, **kwargs):
+        if not self._icacheuse:
+            return super(MetaIndicator, self).__call__(*args, **kwargs)
 
         # implement a cache to avoid duplicating lines actions
-        ckey = (cls, tuple(args), tuple(kwargs.items()))  # tuples hashable
+        ckey = self, tuple(args), tuple(kwargs.items())
         try:
-            return cls._icache[ckey]
+            return self._icache[ckey]
         except TypeError:  # something not hashable
-            return super(MetaIndicator, cls).__call__(*args, **kwargs)
+            return super(MetaIndicator, self).__call__(*args, **kwargs)
         except KeyError:
             pass  # hashable but not in the cache
 
-        _obj = super(MetaIndicator, cls).__call__(*args, **kwargs)
-        return cls._icache.setdefault(ckey, _obj)
+        _obj = super(MetaIndicator, self).__call__(*args, **kwargs)
+        return self._icache.setdefault(ckey, _obj)
 
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''
         Class has already been created ... register subclasses
         '''
         # Initialize the class
-        super(MetaIndicator, cls).__init__(name, bases, dct)
+        super(MetaIndicator, self).__init__(name, bases, dct)
 
-        if not cls.aliased and \
-           name != 'Indicator' and not name.startswith('_'):
-            refattr = getattr(cls, cls._refname)
-            refattr[name] = cls
+        if not self.aliased and name != 'Indicator' and not name.startswith('_'):
+            refattr = getattr(self, self._refname)
+            refattr[name] = self
 
         # Check if next and once have both been overridden
-        next_over = cls.next != IndicatorBase.next
-        once_over = cls.once != IndicatorBase.once
+        next_over = self.next != IndicatorBase.next
+        once_over = self.once != IndicatorBase.once
 
         if next_over and not once_over:
             # No -> need pointer movement to once simulation via next
-            cls.once = cls.once_via_next
-            cls.preonce = cls.preonce_via_prenext
-            cls.oncestart = cls.oncestart_via_nextstart
+            self.once = self.once_via_next
+            self.preonce = self.preonce_via_prenext
+            self.oncestart = self.oncestart_via_nextstart
 
 
 class Indicator(with_metaclass(MetaIndicator, IndicatorBase)):
@@ -100,7 +99,7 @@ class Indicator(with_metaclass(MetaIndicator, IndicatorBase)):
 
     def preonce_via_prenext(self, start, end):
         # generic implementation if prenext is overridden but preonce is not
-        for i in range(start, end):
+        for _ in range(start, end):
             for data in self.datas:
                 data.advance()
 
@@ -113,7 +112,7 @@ class Indicator(with_metaclass(MetaIndicator, IndicatorBase)):
     def oncestart_via_nextstart(self, start, end):
         # nextstart has been overriden, but oncestart has not and the code is
         # here. call the overriden nextstart
-        for i in range(start, end):
+        for _ in range(start, end):
             for data in self.datas:
                 data.advance()
 
@@ -125,7 +124,7 @@ class Indicator(with_metaclass(MetaIndicator, IndicatorBase)):
 
     def once_via_next(self, start, end):
         # Not overridden, next must be there ...
-        for i in range(start, end):
+        for _ in range(start, end):
             for data in self.datas:
                 data.advance()
 
@@ -137,21 +136,20 @@ class Indicator(with_metaclass(MetaIndicator, IndicatorBase)):
 
 
 class MtLinePlotterIndicator(Indicator.__class__):
-    def donew(cls, *args, **kwargs):
+    def donew(self, *args, **kwargs):
         lname = kwargs.pop('name')
-        name = cls.__name__
+        name = self.__name__
 
-        lines = getattr(cls, 'lines', Lines)
-        cls.lines = lines._derive(name, (lname,), 0, [])
+        lines = getattr(self, 'lines', Lines)
+        self.lines = lines._derive(name, (lname,), 0, [])
 
         plotlines = AutoInfoClass
-        newplotlines = dict()
-        newplotlines.setdefault(lname, dict())
-        cls.plotlines = plotlines._derive(name, newplotlines, [], recurse=True)
+        newplotlines = {}
+        newplotlines.setdefault(lname, {})
+        self.plotlines = plotlines._derive(name, newplotlines, [], recurse=True)
 
         # Create the object and set the params in place
-        _obj, args, kwargs =  \
-            super(MtLinePlotterIndicator, cls).donew(*args, **kwargs)
+        _obj, args, kwargs = super(MtLinePlotterIndicator, self).donew(*args, **kwargs)
 
         _obj.owner = _obj.data.owner._clock
         _obj.data.lines[0].addbinding(_obj.lines[0])

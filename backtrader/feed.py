@@ -41,20 +41,20 @@ from .tradingcal import PandasMarketCalendar
 class MetaAbstractDataBase(dataseries.OHLCDateTime.__class__):
     _indcol = dict()
 
-    def __init__(cls, name, bases, dct):
+    def __init__(self, name, bases, dct):
         '''
         Class has already been created ... register subclasses
         '''
         # Initialize the class
-        super(MetaAbstractDataBase, cls).__init__(name, bases, dct)
+        super(MetaAbstractDataBase, self).__init__(name, bases, dct)
 
-        if not cls.aliased and \
-           name != 'DataBase' and not name.startswith('_'):
-            cls._indcol[name] = cls
+        if not self.aliased and name != 'DataBase' and not name.startswith('_'):
+            self._indcol[name] = self
 
-    def dopreinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaAbstractDataBase, cls).dopreinit(_obj, *args, **kwargs)
+    def dopreinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaAbstractDataBase, self).dopreinit(
+            _obj, *args, **kwargs
+        )
 
         # Find the owner and store it
         _obj._feed = metabase.findowner(_obj, FeedBase)
@@ -65,9 +65,10 @@ class MetaAbstractDataBase(dataseries.OHLCDateTime.__class__):
         _obj._name = ''
         return _obj, args, kwargs
 
-    def dopostinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaAbstractDataBase, cls).dopostinit(_obj, *args, **kwargs)
+    def dopostinit(self, _obj, *args, **kwargs):
+        _obj, args, kwargs = super(MetaAbstractDataBase, self).dopostinit(
+            _obj, *args, **kwargs
+        )
 
         # Either set by subclass or the parameter or use the dataname (ticker)
         _obj._name = _obj._name or _obj.p.name
@@ -106,8 +107,8 @@ class MetaAbstractDataBase(dataseries.OHLCDateTime.__class__):
         _obj._barstack = collections.deque()  # for filter operations
         _obj._barstash = collections.deque()  # for filter operations
 
-        _obj._filters = list()
-        _obj._ffilters = list()
+        _obj._filters = []
+        _obj._ffilters = []
         for fp in _obj.p.filters:
             if inspect.isclass(fp):
                 fp = fp(_obj)
@@ -225,12 +226,10 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
             while dtime > nexteos:
                 nexteos += datetime.timedelta(days=1)  # already utc-like
 
-            nextdteos = date2num(nexteos)  # -> utc-like
-
         else:
             # returns times in utc
             _, nexteos = self._calendar.schedule(dtime, self._tz)
-            nextdteos = date2num(nexteos)  # nextos is already utc
+        nextdteos = date2num(nexteos)  # -> utc-like
 
         return nexteos, nextdteos
 
@@ -244,10 +243,7 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
         return tzparse(self.p.tz)
 
     def date2num(self, dt):
-        if self._tz is not None:
-            return date2num(self._tz.localize(dt))
-
-        return date2num(dt)
+        return date2num(dt) if self._tz is None else date2num(self._tz.localize(dt))
 
     def num2date(self, dt=None, tz=None, naive=True):
         if dt is None:
@@ -282,7 +278,7 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
         # The background thread could keep on adding notifications. The None
         # mark allows to identify which is the last notification to deliver
         self.notifs.append(None)  # put a mark
-        notifs = list()
+        notifs = []
         while True:
             notif = self.notifs.popleft()
             if notif is None:  # mark is reached
@@ -351,26 +347,22 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
         # constructed with 5 seconds updates
         for lalias in self.getlinealiases():
             if lalias != 'datetime':
-                setattr(self, 'tick_' + lalias, None)
+                setattr(self, f'tick_{lalias}', None)
 
         self.tick_last = None
 
     def _tick_fill(self, force=False):
         # If nothing filled the tick_xxx attributes, the bar is the tick
         alias0 = self._getlinealias(0)
-        if force or getattr(self, 'tick_' + alias0, None) is None:
+        if force or getattr(self, f'tick_{alias0}', None) is None:
             for lalias in self.getlinealiases():
                 if lalias != 'datetime':
-                    setattr(self, 'tick_' + lalias,
-                            getattr(self.lines, lalias)[0])
+                    setattr(self, f'tick_{lalias}', getattr(self.lines, lalias)[0])
 
             self.tick_last = getattr(self.lines, alias0)[0]
 
     def advance_peek(self):
-        if len(self) < self.buflen():
-            return self.lines.datetime[1]  # return the future
-
-        return float('inf')  # max date else
+        return self.lines.datetime[1] if len(self) < self.buflen() else float('inf')
 
     def advance(self, size=1, datamaster=None, ticks=True):
         if ticks:
@@ -389,9 +381,8 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
 
             if self.lines.datetime[0] > datamaster.lines.datetime[0]:
                 self.lines.rewind()
-            else:
-                if ticks:
-                    self._tick_fill()
+            elif ticks:
+                self._tick_fill()
         elif len(self) < self.buflen():
             # a resampler may have advance us past the last point
             if ticks:
@@ -418,16 +409,14 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
             self.advance(ticks=ticks)
 
         # a bar is "loaded" or was preloaded - index has been moved to it
-        if datamaster is not None:
-            # there is a time reference to check against
-            if self.lines.datetime[0] > datamaster.lines.datetime[0]:
-                # can't deliver new bar, too early, go back
-                self.rewind()
-                return False
-            else:
-                if ticks:
-                    self._tick_fill()
+        if datamaster is None:
+            if ticks:
+                self._tick_fill()
 
+        elif self.lines.datetime[0] > datamaster.lines.datetime[0]:
+            # can't deliver new bar, too early, go back
+            self.rewind()
+            return False
         else:
             if ticks:
                 self._tick_fill()
@@ -443,15 +432,11 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
         self.home()
 
     def _last(self, datamaster=None):
-        # Last chance for filters to deliver something
-        ret = 0
-        for ff, fargs, fkwargs in self._ffilters:
-            ret += ff.last(self, *fargs, **fkwargs)
-
-        doticks = False
-        if datamaster is not None and self._barstack:
-            doticks = True
-
+        ret = sum(
+            ff.last(self, *fargs, **fkwargs)
+            for ff, fargs, fkwargs in self._ffilters
+        )
+        doticks = bool(datamaster is not None and self._barstack)
         while self._fromstack(forward=True):
             # consume bar(s) produced by "last"s - adding room
             pass
@@ -517,7 +502,7 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
             for ff, fargs, fkwargs in self._filters:
                 # previous filter may have put things onto the stack
                 if self._barstack:
-                    for i in range(len(self._barstack)):
+                    for _ in range(len(self._barstack)):
                         self._fromstack(forward=True)
                         retff = ff(self, *fargs, **fkwargs)
                 else:
@@ -604,7 +589,7 @@ class FeedBase(with_metaclass(metabase.MetaParams, object)):
     params = () + DataBase.params._gettuple()
 
     def __init__(self):
-        self.datas = list()
+        self.datas = []
 
     def start(self):
         for data in self.datas:
@@ -635,13 +620,14 @@ class FeedBase(with_metaclass(metabase.MetaParams, object)):
 
 
 class MetaCSVDataBase(DataBase.__class__):
-    def dopostinit(cls, _obj, *args, **kwargs):
+    def dopostinit(self, _obj, *args, **kwargs):
         # Before going to the base class to make sure it overrides the default
         if not _obj.p.name and not _obj._name:
             _obj._name, _ = os.path.splitext(os.path.basename(_obj.p.dataname))
 
-        _obj, args, kwargs = \
-            super(MetaCSVDataBase, cls).dopostinit(_obj, *args, **kwargs)
+        _obj, args, kwargs = super(MetaCSVDataBase, self).dopostinit(
+            _obj, *args, **kwargs
+        )
 
         return _obj, args, kwargs
 
@@ -721,8 +707,7 @@ class CSVDataBase(with_metaclass(MetaCSVDataBase, DataBase)):
             return None
 
         line = line.rstrip('\n')
-        linetokens = line.split(self.separator)
-        return linetokens
+        return line.split(self.separator)
 
 
 class CSVFeedBase(FeedBase):
@@ -797,7 +782,7 @@ class DataClone(AbstractDataBase):
             return True
 
         # Not preloading
-        if not (len(self.data) > self._dlen):
+        if len(self.data) <= self._dlen:
             # Data not beyond last seen bar
             return False
 
